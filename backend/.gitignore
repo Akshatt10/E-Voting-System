@@ -3,7 +3,9 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
+# Docker Compose files
+docker-compose.yml
+docker-compose*.yml
 # Environment variables
 .env
 .env.*
@@ -32,3 +34,4 @@ out/
 # Misc
 coverage/
 *.local
+/generated/prisma
