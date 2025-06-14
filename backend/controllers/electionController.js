@@ -1,6 +1,9 @@
 // controllers/electionController.js
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+
+// Import the enum directly from Prisma client
+const { VoteStatus } = require('@prisma/client');
 
 // Create an election with candidates
 const createElection = async (req, res) => {
@@ -14,6 +17,7 @@ const createElection = async (req, res) => {
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         isPublished: true,
+        status: VoteStatus.SCHEDULED,
         candidates: {
           create: candidates.map(name => ({ name }))
         }
@@ -47,7 +51,6 @@ const cancelElection = async (req, res) => {
   }
 };
 
-
 const rescheduleElection = async (req, res) => {
   try {
     const { id } = req.params;
@@ -76,7 +79,8 @@ const rescheduleElection = async (req, res) => {
       where: { id },
       data: {
         startTime: parsedStart,
-        endTime: parsedEnd
+        endTime: parsedEnd,
+        status: VoteStatus.RESCHEDULED
       }
     });
 
@@ -90,7 +94,6 @@ const rescheduleElection = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   createElection,

@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "VoteStatus" ADD VALUE 'RESCHEDULED';
