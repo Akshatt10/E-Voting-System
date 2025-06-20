@@ -12,6 +12,7 @@ import CancelVoting from './pages/CancelVoting';
 import Profile from './pages/Profile';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/DashboardLayout';
+import ElectionDetails from './pages/Election_details';
 
 function App() {
   return (
@@ -23,7 +24,6 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Protected Routes wrapped inside DashboardLayout */}
         <Route element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vote-status" element={<VoteStatus />} />
@@ -31,7 +31,9 @@ function App() {
           <Route path="/reschedule-voting" element={<RescheduleVoting />} />
           <Route path="/cancel-voting" element={<CancelVoting />} />
           <Route path="/profile" element={<Profile />} />
+          
         </Route>
+        <Route path="/election/:id" element={<ElectionDetails />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Home />} />

@@ -33,26 +33,39 @@ const Signup = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate successful registration
-      // alert('Registered successfully!');
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('Register error:', err);
-      setError('Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
+  try {
+    const res = await fetch('http://localhost:3000/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Registration failed');
     }
-  };
 
+    // Save token (if returned)
+    if (data.accessToken) {
+      localStorage.setItem('accessToken', data.accessToken);
+    }
+
+    navigate('/dashboard');
+  } catch (err) {
+    console.error('Register error:', err);
+    setError(err.message || 'Registration failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
   const getPasswordStrengthColor = () => {
     if (passwordStrength <= 1) return 'bg-red-500';
     if (passwordStrength <= 3) return 'bg-yellow-500';
