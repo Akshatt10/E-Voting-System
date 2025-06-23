@@ -12,7 +12,6 @@ const transporter = nodemailer.createTransport({
 const sendCandidateNotification = async (candidateEmail, electionData) => {
   const { id, title, description, startTime, endTime } = electionData;
 
-  // Format dates for better readability
   const formattedStartTime = new Date(startTime).toLocaleString('en-US', {
     year: 'numeric',
     month: 'long',
