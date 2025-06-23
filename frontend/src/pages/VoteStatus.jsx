@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit } from "lucide-react";
 
 const VoteStatus = () => {
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [candidatesMap, setCandidatesMap] = useState({});
 
   const fetchElections = useCallback(async () => {
     setLoading(true);
@@ -24,12 +26,7 @@ const VoteStatus = () => {
         },
       });
       if (!res.ok) {
-        let errorData = {};
-        try {
-          errorData = await res.json();
-        } catch (e) {
-          throw new Error(`Server responded with status ${res.status}: ${res.statusText}`);
-        }
+        const errorData = await res.json();
         throw new Error(errorData.message || "Failed to fetch elections");
       }
       const data = await res.json();
@@ -43,11 +40,28 @@ const VoteStatus = () => {
     }
   }, []);
 
+  const fetchCandidates = async (electionId) => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const res = await fetch(`/api/candidates/${electionId}`, {
+        headers: {
+          Authorization: "Bearer " + accessToken,
+        },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch candidates.");
+      }
+      const data = await res.json();
+      setCandidatesMap(prev => ({ ...prev, [electionId]: data.candidates }));
+    } catch (error) {
+      console.error("Candidate fetch error:", error);
+      setCandidatesMap(prev => ({ ...prev, [electionId]: [] }));
+    }
+  };
+
   useEffect(() => {
     fetchElections();
-
     const interval = setInterval(fetchElections, 60000);
-
     return () => clearInterval(interval);
   }, [fetchElections]);
 
@@ -57,22 +71,35 @@ const VoteStatus = () => {
     const end = new Date(endTime);
 
     if (currentStatus === "CANCELLED") {
-      return { text: "Cancelled", color: "red", icon: XCircle };
-    } else if (now < start) {
-      return { text: "Scheduled", color: "blue", icon: Calendar };
-    } else if (now >= start && now <= end) {
-      return { text: "Active", color: "green", icon: Clock };
+      return { text: "Cancelled", color: "red", bgColor: "bg-red-100", textColor: "text-red-800" };
+    } else if (currentStatus === "SCHEDULED" || now < start) {
+      return { text: "Scheduled", color: "blue", bgColor: "bg-blue-100", textColor: "text-blue-800" };
+    } else if ((currentStatus === "ACTIVE") || (now >= start && now <= end)) {
+      return { text: "Active", color: "green", bgColor: "bg-green-100", textColor: "text-green-800" };
     } else {
-      return { text: "Completed", color: "gray", icon: CheckCircle };
+      return { text: "Completed", color: "green", bgColor: "bg-green-100", textColor: "text-green-800" };
     }
   };
 
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) + ' | ' + date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-gray-800 mb-3">Voting Event Status</h1>
-          <p className="text-gray-600 text-lg">Keep track of all your elections: scheduled, active, and completed.</p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Vote Status</h1>
+          <p className="text-gray-600">Track and manage all your voting events and meetings</p>
         </div>
 
         {loading && (
@@ -83,14 +110,14 @@ const VoteStatus = () => {
         )}
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg flex items-center justify-center animate-fadeIn">
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg flex items-center">
             <AlertCircle className="text-red-500 mr-3" size={24} />
-            <span className="text-red-700 font-medium text-center">{error}</span>
+            <span className="text-red-700 font-medium">{error}</span>
           </div>
         )}
 
         {!loading && !error && elections.length === 0 && (
-          <div className="text-center p-8 bg-white rounded-2xl shadow-lg mt-8 animate-fadeIn">
+          <div className="text-center p-8 bg-white rounded-lg shadow">
             <Info className="mx-auto text-blue-500 mb-4" size={48} />
             <p className="text-xl text-gray-700 font-semibold">No voting events found.</p>
             <p className="text-gray-500 mt-2">Start by creating a new election to see its status here!</p>
@@ -98,53 +125,105 @@ const VoteStatus = () => {
         )}
 
         {!loading && !error && elections.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-            {elections.map((item) => {
-              const { text: statusText, color: statusColor, icon: StatusIcon } = getElectionStatus(item.startTime, item.endTime, item.status);
-              return (
-                <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100">
-                  <div className={`p-5 border-b-4 border-${statusColor}-500`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xl font-bold text-gray-800 truncate pr-4">{item.title}</h3>
-                      <div className={`flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-${statusColor}-100 text-${statusColor}-700`}>
-                        <StatusIcon size={16} className="mr-1" />
-                        {statusText}
-                      </div>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description || "No description provided."}</p>
-
-                    <div className="text-gray-500 text-sm space-y-1">
-                      <p className="flex items-center">
-                        <Calendar size={14} className="mr-2 text-gray-400" />
-                        <span className="font-semibold">Start:</span> {new Date(item.startTime).toLocaleString()}
-                      </p>
-                      <p className="flex items-center">
-                        <Clock size={14} className="mr-2 text-gray-400" />
-                        <span className="font-semibold">End:</span> {new Date(item.endTime).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-5 bg-gray-50 flex justify-end">
-                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 shadow">
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr No</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name of Matter</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title of Meeting</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details of COC Members</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date & time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date & time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {elections.map((item, index) => {
+                    const { text: statusText, bgColor, textColor } = getElectionStatus(item.startTime, item.endTime, item.status);
+                    return (
+                      <React.Fragment key={item.id}>
+                        <tr className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900 truncate" title={item.title}>{item.title.split(' ').slice(-3).join(' ')}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900 truncate" title={item.title}>{item.title}</td>
+                          <td className="px-6 py-4 text-sm">
+                            <button
+                              onClick={async () => {
+                                const alreadyOpen = expandedRow === item.id;
+                                setExpandedRow(alreadyOpen ? null : item.id);
+                                if (!alreadyOpen && !candidatesMap[item.id]) {
+                                  await fetchCandidates(item.id);
+                                }
+                              }}
+                              className="bg-black text-white px-3 py-1 rounded text-xs hover:bg-gray-800"
+                            >
+                              Click Here
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.startTime)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.endTime)}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bgColor} ${textColor}`}>
+                              {statusText}
+                            </span>
+                            <div className="text-xs text-gray-500 mt-1">Time Over</div>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <button className="text-blue-600 hover:text-blue-800">
+                              <Edit size={16} />
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <button className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                        {expandedRow === item.id && (
+                          <tr className="bg-gray-50 border-t">
+                            <td colSpan="9" className="p-4">
+                              {candidatesMap[item.id]?.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full text-sm text-left border">
+                                    <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
+                                      <tr>
+                                        <th className="px-4 py-2 border">Sr No</th>
+                                        <th className="px-4 py-2 border">Name</th>
+                                        <th className="px-4 py-2 border">Email</th>
+                                        <th className="px-4 py-2 border">Share</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {candidatesMap[item.id].map((cand, idx) => (
+                                        <tr key={cand.id} className="bg-white border-t">
+                                          <td className="px-4 py-2 border">{idx + 1}</td>
+                                          <td className="px-4 py-2 border">{cand.name}</td>
+                                          <td className="px-4 py-2 border">{cand.email}</td>
+                                          <td className="px-4 py-2 border">{cand.share}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div className="text-gray-600">No candidates found.</div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 };

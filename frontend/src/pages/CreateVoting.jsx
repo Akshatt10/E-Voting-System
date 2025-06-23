@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail } from "lucide-react";
 
 const CreateVoting = () => {
   const [form, setForm] = useState({
@@ -7,24 +7,25 @@ const CreateVoting = () => {
     description: "",
     startTime: "",
     endTime: "",
-    candidates: [""],
+    candidates: [{ name: "", email: "" }], // Changed to objects with name and email
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
 
   const handleChange = (e) => { 
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleCandidateChange = (idx, value) => {
+  const handleCandidateChange = (idx, field, value) => {
     const updated = [...form.candidates];
-    updated[idx] = value;
+    updated[idx] = { ...updated[idx], [field]: value };
     setForm({ ...form, candidates: updated });
   };
 
   const addCandidate = () => {
-    setForm({ ...form, candidates: [...form.candidates, ""] });
+    setForm({ ...form, candidates: [...form.candidates, { name: "", email: "" }] });
   };
 
   const removeCandidate = (idx) => {
@@ -32,17 +33,34 @@ const CreateVoting = () => {
     setForm({ ...form, candidates: updated });
   };
 
+  const validateEmail = (email) => {
+    if (!email) return true; // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
  const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
   setError("");
+  setSuccess("");
 
-  const validCandidates = form.candidates.map(c => c.trim()).filter(Boolean);
+  // Validate candidates
+  const validCandidates = form.candidates.filter(c => c.name.trim());
   if (validCandidates.length < 2) {
     setError("Please enter at least two candidate names.");
     setLoading(false);
     return;
   }
+
+  // Validate emails
+  const invalidEmails = validCandidates.filter(c => c.email && !validateEmail(c.email));
+  if (invalidEmails.length > 0) {
+    setError("Please enter valid email addresses for all candidates.");
+    setLoading(false);
+    return;
+  }
+
   if (form.endTime <= form.startTime) {
     setError("End time must be after start time.");
     setLoading(false);
@@ -50,33 +68,39 @@ const CreateVoting = () => {
   }
 
   try {
-    // Get the auth token from localStorage or wherever you store it
-    const accessToken = localStorage.getItem('accessToken'); // Adjust this based on how you store tokens
+    const accessToken = localStorage.getItem('accessToken');
     
-    const response = await fetch('/api/elections/create', { // Adjust the URL to match your backend endpoint
+    const response = await fetch('/api/elections/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': "Bearer " + accessToken,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         title: form.title,
         description: form.description,
         startTime: form.startTime,
         endTime: form.endTime,
-        candidates: validCandidates
+        candidates: validCandidates // Now sends objects with name and email
       })
     });
 
     const data = await response.json();
 
     if (response.ok && data.success) {
-      alert("Election created successfully!");
-      // Optionally redirect to elections list or reset form
-      // window.location.href = '/elections';
-      // or reset the form:
-      // setForm({ title: "", description: "", startTime: "", endTime: "", candidates: [""] });
-      // setCurrentStep(1);
+      setSuccess("Election created successfully! Email notifications have been sent to candidates.");
+      // Reset form after successful creation
+      setTimeout(() => {
+        setForm({ 
+          title: "", 
+          description: "", 
+          startTime: "", 
+          endTime: "", 
+          candidates: [{ name: "", email: "" }] 
+        });
+        setCurrentStep(1);
+        setSuccess("");
+      }, 3000);
     } else {
       setError(data.message || "Failed to create election. Please try again.");
     }
@@ -106,7 +130,7 @@ const CreateVoting = () => {
       case 2:
         return form.startTime !== "" && form.endTime !== "";
       case 3:
-        return form.candidates.filter(c => c.trim()).length >= 2;
+        return form.candidates.filter(c => c.name.trim()).length >= 2;
       default:
         return false;
     }
@@ -131,7 +155,7 @@ const CreateVoting = () => {
   };
 
   const handleNextStep = () => {
-    setError(""); // Clear previous errors on next
+    setError("");
     if (currentStep === 1 && !isStepComplete(1)) {
       setError("Please enter the Election Title.");
       return;
@@ -198,6 +222,15 @@ const CreateVoting = () => {
                 <div className="flex items-center">
                   <AlertCircle className="text-red-500 mr-2" size={20} />
                   <span className="text-red-700 font-medium">{error}</span>
+                </div>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="text-green-500 mr-2" size={20} />
+                  <span className="text-green-700 font-medium">{success}</span>
                 </div>
               </div>
             )}
@@ -311,23 +344,38 @@ const CreateVoting = () => {
                 <div className="space-y-4">
                   {form.candidates.map((candidate, idx) => (
                     <div key={idx} className="group">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-sm">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-sm mt-1">
                           {idx + 1}
                         </div>
-                        <input
-                          type="text"
-                          value={candidate}
-                          onChange={(e) => handleCandidateChange(idx, e.target.value)}
-                          required
-                          className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 text-lg"
-                          placeholder={`Candidate ${idx + 1} name`}
-                        />
+                        <div className="flex-1 space-y-3">
+                          <input
+                            type="text"
+                            value={candidate.name}
+                            onChange={(e) => handleCandidateChange(idx, 'name', e.target.value)}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 text-lg"
+                            placeholder={`Candidate ${idx + 1} name *`}
+                          />
+                          <div className="relative">
+                            <input
+                              type="email"
+                              value={candidate.email}
+                              onChange={(e) => handleCandidateChange(idx, 'email', e.target.value)}
+                              className="w-full px-4 py-3 pl-10 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200"
+                              placeholder={`Candidate ${idx + 1} email (optional)`}
+                            />
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                          </div>
+                          {candidate.email && !validateEmail(candidate.email) && (
+                            <p className="text-red-500 text-sm">Please enter a valid email address</p>
+                          )}
+                        </div>
                         {form.candidates.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeCandidate(idx)}
-                            className="flex-shrink-0 w-10 h-10 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-colors duration-200 flex items-center justify-center"
+                            className="flex-shrink-0 w-10 h-10 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-colors duration-200 flex items-center justify-center mt-1"
                             title="Remove candidate"
                           >
                             <X size={18} />
@@ -346,11 +394,14 @@ const CreateVoting = () => {
                     <span>Add Another Candidate</span>
                   </button>
 
-                  {form.candidates.filter(c => c.trim()).length >= 2 && (
+                  {form.candidates.filter(c => c.name.trim()).length >= 2 && (
                     <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
                       <p className="text-green-800 text-sm">
                         <CheckCircle className="inline mr-1" size={16} />
-                        <strong>{form.candidates.filter(c => c.trim()).length} candidates</strong> added successfully
+                        <strong>{form.candidates.filter(c => c.name.trim()).length} candidates</strong> added successfully
+                      </p>
+                      <p className="text-green-700 text-xs mt-1">
+                        📧 Email notifications will be sent to candidates with email addresses
                       </p>
                     </div>
                   )}
@@ -419,7 +470,7 @@ const CreateVoting = () => {
               </div>
               <div>
                 <span className="font-medium text-gray-600">Candidates:</span>
-                <p className="text-gray-800">{form.candidates.filter(c => c.trim()).length} candidates</p>
+                <p className="text-gray-800">{form.candidates.filter(c => c.name.trim()).length} candidates</p>
               </div>
               {form.startTime && (
                 <div>
@@ -433,6 +484,12 @@ const CreateVoting = () => {
                   <p className="text-gray-800">{new Date(form.endTime).toLocaleString()}</p>
                 </div>
               )}
+              <div className="md:col-span-2">
+                <span className="font-medium text-gray-600">Email Notifications:</span>
+                <p className="text-gray-800">
+                  {form.candidates.filter(c => c.email && c.name.trim()).length} candidates will receive email notifications
+                </p>
+              </div>
             </div>
           </div>
         )}
