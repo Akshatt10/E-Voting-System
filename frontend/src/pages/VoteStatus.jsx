@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit } from "lucide-react";
+import {
+  Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit
+} from "lucide-react";
 
 const VoteStatus = () => {
   const [elections, setElections] = useState([]);
@@ -7,6 +9,8 @@ const VoteStatus = () => {
   const [error, setError] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const [candidatesMap, setCandidatesMap] = useState({});
+  const [resendingEmail, setResendingEmail] = useState(null); // To track which email is being resent
+  const [emailResendStatus, setEmailResendStatus] = useState({ success: false, message: "" }); // For feedback
 
   const fetchElections = useCallback(async () => {
     setLoading(true);
@@ -43,7 +47,7 @@ const VoteStatus = () => {
   const fetchCandidates = async (electionId) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const res = await fetch(`/api/candidates/${electionId}`, {
+      const res = await fetch(`http://localhost:3000/api/elections/candidates/${electionId}`, {
         headers: {
           Authorization: "Bearer " + accessToken,
         },
@@ -52,12 +56,56 @@ const VoteStatus = () => {
         throw new Error("Failed to fetch candidates.");
       }
       const data = await res.json();
-      setCandidatesMap(prev => ({ ...prev, [electionId]: data.candidates }));
+      setCandidatesMap(prev => ({
+        ...prev,
+        [electionId]: data.candidates.map(c => ({ ...c, selected: false }))
+      }));
     } catch (error) {
       console.error("Candidate fetch error:", error);
       setCandidatesMap(prev => ({ ...prev, [electionId]: [] }));
     }
   };
+
+  // --- NEW EMAIL RESEND LOGIC ---
+  const handleResendEmail = async (electionId, candidateEmail, candidateName) => {
+    setResendingEmail(candidateEmail); // Set loading state for this specific email
+    setEmailResendStatus({ success: false, message: "" }); // Reset previous status
+
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      setEmailResendStatus({ success: false, message: "Authentication failed. Please log in." });
+      setResendingEmail(null);
+      return;
+    }
+
+    try {
+      // Replace with your actual email sending API endpoint
+      const res = await fetch(`/api/elections/${electionId}/resend-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + accessToken,
+        },
+        body: JSON.stringify({ email: candidateEmail, name: candidateName, electionId: electionId }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to send email.");
+      }
+
+      const data = await res.json();
+      setEmailResendStatus({ success: true, message: data.message || "Email resent successfully!" });
+    } catch (err) {
+      console.error("Error resending email:", err);
+      setEmailResendStatus({ success: false, message: err.message || "Failed to resend email." });
+    } finally {
+      setResendingEmail(null); // Clear loading state
+      // Optionally clear the success/error message after a few seconds
+      setTimeout(() => setEmailResendStatus({ success: false, message: "" }), 5000);
+    }
+  };
+  // --- END NEW EMAIL RESEND LOGIC ---
 
   useEffect(() => {
     fetchElections();
@@ -116,11 +164,10 @@ const VoteStatus = () => {
           </div>
         )}
 
-        {!loading && !error && elections.length === 0 && (
-          <div className="text-center p-8 bg-white rounded-lg shadow">
-            <Info className="mx-auto text-blue-500 mb-4" size={48} />
-            <p className="text-xl text-gray-700 font-semibold">No voting events found.</p>
-            <p className="text-gray-500 mt-2">Start by creating a new election to see its status here!</p>
+        {emailResendStatus.message && (
+          <div className={`mb-6 p-4 ${emailResendStatus.success ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'} border-l-4 rounded-lg flex items-center`}>
+            {emailResendStatus.success ? <CheckCircle className="text-green-500 mr-3" size={24} /> : <AlertCircle className="text-red-500 mr-3" size={24} />}
+            <span className={`${emailResendStatus.success ? 'text-green-700' : 'text-red-700'} font-medium`}>{emailResendStatus.message}</span>
           </div>
         )}
 
@@ -130,15 +177,15 @@ const VoteStatus = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr No</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name of Matter</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title of Meeting</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details of COC Members</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date & time</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date & time</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sr No</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name of Matter</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title of Meeting</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details of COC Members</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date & Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date & Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Edit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">View</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -148,8 +195,8 @@ const VoteStatus = () => {
                       <React.Fragment key={item.id}>
                         <tr className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
-                          <td className="px-6 py-4 text-sm text-gray-900 truncate" title={item.title}>{item.title.split(' ').slice(-3).join(' ')}</td>
-                          <td className="px-6 py-4 text-sm text-gray-900 truncate" title={item.title}>{item.title}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900">{item.title.split(' ').slice(-3).join(' ')}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900">{item.title}</td>
                           <td className="px-6 py-4 text-sm">
                             <button
                               onClick={async () => {
@@ -170,7 +217,6 @@ const VoteStatus = () => {
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bgColor} ${textColor}`}>
                               {statusText}
                             </span>
-                            <div className="text-xs text-gray-500 mt-1">Time Over</div>
                           </td>
                           <td className="px-6 py-4 text-sm">
                             <button className="text-blue-600 hover:text-blue-800">
@@ -183,27 +229,72 @@ const VoteStatus = () => {
                             </button>
                           </td>
                         </tr>
+
                         {expandedRow === item.id && (
                           <tr className="bg-gray-50 border-t">
                             <td colSpan="9" className="p-4">
                               {candidatesMap[item.id]?.length > 0 ? (
                                 <div className="overflow-x-auto">
-                                  <table className="min-w-full text-sm text-left border">
+                                  <table className="min-w-full text-sm border rounded-md">
                                     <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
                                       <tr>
+                                        <th className="px-4 py-2 border">
+                                          <input
+                                            type="checkbox"
+                                            onChange={(e) => {
+                                              const checked = e.target.checked;
+                                              setCandidatesMap(prev => ({
+                                                ...prev,
+                                                [item.id]: prev[item.id].map(c => ({ ...c, selected: checked }))
+                                              }));
+                                            }}
+                                          />
+                                          <span className="ml-2">Check All</span>
+                                        </th>
                                         <th className="px-4 py-2 border">Sr No</th>
                                         <th className="px-4 py-2 border">Name</th>
                                         <th className="px-4 py-2 border">Email</th>
                                         <th className="px-4 py-2 border">Share</th>
+                                        <th className="px-4 py-2 border">Actions</th> {/* Changed "Email" to "Actions" */}
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {candidatesMap[item.id].map((cand, idx) => (
                                         <tr key={cand.id} className="bg-white border-t">
+                                          <td className="px-4 py-2 border text-center">
+                                            <input
+                                              type="checkbox"
+                                              checked={cand.selected || false}
+                                              onChange={(e) => {
+                                                const updated = [...candidatesMap[item.id]];
+                                                updated[idx].selected = e.target.checked;
+                                                setCandidatesMap(prev => ({
+                                                  ...prev,
+                                                  [item.id]: updated
+                                                }));
+                                              }}
+                                            />
+                                          </td>
                                           <td className="px-4 py-2 border">{idx + 1}</td>
                                           <td className="px-4 py-2 border">{cand.name}</td>
                                           <td className="px-4 py-2 border">{cand.email}</td>
                                           <td className="px-4 py-2 border">{cand.share}</td>
+                                          <td className="px-4 py-2 border">
+                                            <button
+                                              onClick={() => handleResendEmail(item.id, cand.email, cand.name)}
+                                              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-1 px-3 rounded text-xs flex items-center justify-center"
+                                              disabled={resendingEmail === cand.email} // Disable button while sending
+                                            >
+                                              {resendingEmail === cand.email ? (
+                                                <>
+                                                  <Loader className="animate-spin mr-2" size={14} />
+                                                  Sending...
+                                                </>
+                                              ) : (
+                                                "Resend Email"
+                                              )}
+                                            </button>
+                                          </td>
                                         </tr>
                                       ))}
                                     </tbody>
