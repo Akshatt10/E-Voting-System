@@ -67,7 +67,13 @@ const VoteStatus = () => {
   };
 
   // --- NEW EMAIL RESEND LOGIC ---
-  const handleResendEmail = async (electionId, candidateEmail, candidateName) => {
+  const handleResendEmail = async (electionId, candidateEmail) => { // Removed candidateName as it's not strictly needed for this API call
+    if (!candidateEmail) {
+      setEmailResendStatus({ success: false, message: "Candidate email is missing." });
+      setTimeout(() => setEmailResendStatus({ success: false, message: "" }), 5000);
+      return;
+    }
+
     setResendingEmail(candidateEmail); // Set loading state for this specific email
     setEmailResendStatus({ success: false, message: "" }); // Reset previous status
 
@@ -79,14 +85,14 @@ const VoteStatus = () => {
     }
 
     try {
-      // Replace with your actual email sending API endpoint
-      const res = await fetch(`/api/elections/${electionId}/resend-email`, {
+      // Use the new backend route: /api/elections/resend-email/:electionId
+      const res = await fetch(`/api/elections/resend-email/${electionId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
         },
-        body: JSON.stringify({ email: candidateEmail, name: candidateName, electionId: electionId }),
+        body: JSON.stringify({ candidateEmail: candidateEmail }), // Send candidateEmail in the body
       });
 
       if (!res.ok) {
@@ -282,7 +288,7 @@ const VoteStatus = () => {
                                           <td className="px-4 py-2 border">
                                             <button
                                               onClick={() => handleResendEmail(item.id, cand.email, cand.name)}
-                                              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-1 px-3 rounded text-xs flex items-center justify-center"
+                                              className="bg-blue-400 hover:bg-blue-500 text-black font-semibold py-1 px-3 rounded text-xs flex items-center justify-center"
                                               disabled={resendingEmail === cand.email} // Disable button while sending
                                             >
                                               {resendingEmail === cand.email ? (
