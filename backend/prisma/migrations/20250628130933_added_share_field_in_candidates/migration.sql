@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Candidate" ADD COLUMN     "share" DOUBLE PRECISION NOT NULL DEFAULT 0.0;

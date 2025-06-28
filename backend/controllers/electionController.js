@@ -25,7 +25,8 @@ const createElection = async (req, res) => {
         candidates: {
           create: candidates.map(candidate => ({
             name: candidate.name,
-            email: candidate.email
+            email: candidate.email,
+            share: parseFloat(candidate.share)
           }))
         }
       },
@@ -158,10 +159,32 @@ const getElectionById = async (req, res) => {
   }
 };
 
+const getCandidatesByElectionId = async (req, res) => {
+  const { electionId } = req.params;
+  try {
+    const candidates = await prisma.candidate.findMany({
+      where: { electionId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        share: true,
+        description: true
+      }
+    });
+
+    return res.status(200).json({ candidates });
+  } catch (error) {
+    console.error('Error fetching candidates:', error);
+    return res.status(500).json({ message: 'Failed to fetch candidates.' });
+  }
+}
+
 module.exports = {
   createElection,
   cancelElection,
   rescheduleElection,
   getAllElections,
-  getElectionById
+  getElectionById,
+  getCandidatesByElectionId
 };

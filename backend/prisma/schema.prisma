@@ -58,6 +58,7 @@ model Candidate {
   email       String?    
   description String?
   electionId  String
+  share       Float      @default(0.0)
   election    Election   @relation(fields: [electionId], references: [id])
 
   votes       Vote[]
