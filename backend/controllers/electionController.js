@@ -180,11 +180,59 @@ const getCandidatesByElectionId = async (req, res) => {
   }
 }
 
+const resendCandidateEmail = async (req, res) => {
+  try {
+    const { electionId } = req.params; // Get election ID from URL parameters
+    const { candidateEmail } = req.body; // Get candidate's email from the request body
+
+    if (!candidateEmail) {
+      return res.status(400).json({ success: false, message: 'Candidate email is required.' });
+    }
+
+    // 1. Fetch the election details from the database using Prisma
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      include: { candidates: true }, // Include candidates to potentially verify the email belongs to this election
+    });
+
+    if (!election) {
+      return res.status(404).json({ success: false, message: 'Election not found.' });
+    }
+
+    // Optional: Verify if the candidateEmail actually belongs to this election
+    const candidateExists = election.candidates.some(c => c.email === candidateEmail);
+    if (!candidateExists) {
+        // If the email is not found among this election's candidates,
+        // you might still want to send a success response to avoid exposing valid emails,
+        // or return an error if strict validation is desired.
+        // For now, we'll return an error if the email isn't linked to the election.
+        return res.status(404).json({ success: false, message: 'Candidate email not found for this election.' });
+    }
+
+    // 2. Call your existing sendCandidateNotification function
+    // Pass the candidate's email and the necessary election data
+    await sendCandidateNotification(candidateEmail, {
+      id: election.id,
+      title: election.title,
+      description: election.description,
+      startTime: election.startTime,
+      endTime: election.endTime,
+    });
+
+    res.status(200).json({ success: true, message: `Notification email successfully resent to ${candidateEmail}.` });
+
+  } catch (error) {
+    console.error('Error resending candidate email:', error);
+    res.status(500).json({ success: false, message: 'Failed to resend email.', error: error.message });
+  }
+};
+
 module.exports = {
   createElection,
   cancelElection,
   rescheduleElection,
   getAllElections,
   getElectionById,
-  getCandidatesByElectionId
+  getCandidatesByElectionId,
+  resendCandidateEmail
 };

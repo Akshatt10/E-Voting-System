@@ -6,7 +6,8 @@ const {
   rescheduleElection,
   getAllElections,
   getElectionById,
-  getCandidatesByElectionId
+  getCandidatesByElectionId,
+  resendCandidateEmail
 } = require('../controllers/electionController');
 
 const { authenticateToken } = require('../middleware/auth');
@@ -18,6 +19,8 @@ router.get('/', authenticateToken, getAllElections);
 router.get('/:id', getElectionById);
 
 router.get('/candidates/:electionId', getCandidatesByElectionId);
+
+router.post('/resend-email/:electionId', authenticateToken, resendCandidateEmail);
 
 
 
