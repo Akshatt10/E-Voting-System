@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react"; // Added useEffect for potential future use, though not strictly needed here
-import { Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail, Scale } from "lucide-react";
 
 const CreateVoting = () => {
   const [form, setForm] = useState({
+    Matter: "",
     title: "",
     description: "",
     startTime: "",
@@ -14,8 +15,8 @@ const CreateVoting = () => {
   const [success, setSuccess] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [totalShareError, setTotalShareError] = useState("");
+  
   const calculateTotalShare = () => {
-
     const validShares = form.candidates
       .map(c => parseFloat(c.share)) 
       .filter(share => !isNaN(share) && share >= 0);
@@ -37,7 +38,6 @@ const CreateVoting = () => {
       setTotalShareError(""); // Clear error when not on the candidate step
     }
   }, [form.candidates, currentStep]);
-
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -111,7 +111,6 @@ const CreateVoting = () => {
     }
     // --- End New Share Sum Validation ---
 
-
     if (form.endTime <= form.startTime) {
       setError("End time must be after start time.");
       setLoading(false);
@@ -128,7 +127,6 @@ const CreateVoting = () => {
         share: parseFloat(c.share) // Ensure share is sent as a number
       }));
 
-
       const response = await fetch('/api/elections/create', {
         method: 'POST',
         headers: {
@@ -136,6 +134,7 @@ const CreateVoting = () => {
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
+          Matter: form.Matter, // Include Matter field in the request
           title: form.title,
           description: form.description,
           startTime: form.startTime,
@@ -151,6 +150,7 @@ const CreateVoting = () => {
         // Reset form after successful creation
         setTimeout(() => {
           setForm({
+            Matter: "",
             title: "",
             description: "",
             startTime: "",
@@ -185,7 +185,7 @@ const CreateVoting = () => {
   const isStepComplete = (step) => {
     switch (step) {
       case 1:
-        return form.title.trim() !== "";
+        return form.Matter.trim() !== "" && form.title.trim() !== "";
       case 2:
         return form.startTime !== "" && form.endTime !== "";
       case 3:
@@ -225,7 +225,7 @@ const CreateVoting = () => {
     setError(""); // Clear previous error when moving to next step
     if (currentStep === 1) {
       if (!isStepComplete(1)) {
-        setError("Please enter the Election Title.");
+        setError("Please enter both the Matter Name and Election Title.");
         return;
       }
     } else if (currentStep === 2) {
@@ -243,7 +243,6 @@ const CreateVoting = () => {
 
   // Determine if the "Create Election" button should be disabled
   const isSubmitDisabled = loading || totalShareError !== "" || form.candidates.filter(c => c.name.trim()).length < 2 || form.candidates.some(c => c.email && !validateEmail(c.email)) || form.candidates.some(c => parseFloat(c.share) < 0 || c.share === '');
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
@@ -321,6 +320,27 @@ const CreateVoting = () => {
 
                 <div className="space-y-6">
                   <div className="group">
+                    <label htmlFor="Matter" className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Scale className="inline mr-1" size={16} />
+                      Matter Name *
+                    </label>
+                    <input
+                      id="Matter"
+                      type="text"
+                      name="Matter"
+                      value={form.Matter}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 text-lg"
+                      placeholder="e.g., Board Resolution, Policy Amendment, Budget Approval"
+                      autoFocus
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      The specific matter or issue being voted on
+                    </p>
+                  </div>
+
+                  <div className="group">
                     <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
                       Election Title *
                     </label>
@@ -333,7 +353,6 @@ const CreateVoting = () => {
                       required
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 text-lg"
                       placeholder="e.g., Student Council Election 2024"
-                      autoFocus
                     />
                   </div>
 
@@ -524,7 +543,6 @@ const CreateVoting = () => {
               </div>
             )}
 
-
             {/* Existing completion message - adjust if needed */}
             {currentStep === 3 && form.candidates.filter(c => c.name.trim()).length >= 2 && calculateTotalShare() === 100 && (
               <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
@@ -593,6 +611,10 @@ const CreateVoting = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Election Summary</h3>
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <div>
+              <span className="font-medium text-gray-600">Matter:</span>
+              <p className="text-gray-800">{form.Matter}</p>
+            </div>
+            <div>
               <span className="font-medium text-gray-600">Title:</span>
               <p className="text-gray-800">{form.title}</p>
             </div>
@@ -639,4 +661,5 @@ const CreateVoting = () => {
     </div>
   );
 };
+
 export default CreateVoting;

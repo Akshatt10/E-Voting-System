@@ -12,11 +12,12 @@ const VoteStatus = {
 
 const createElection = async (req, res) => {
   try {
-    const { title, description, startTime, endTime, candidates } = req.body;
+    const { Matter, title, description, startTime, endTime, candidates } = req.body;
     
     // Create the election
     const election = await prisma.election.create({
       data: {
+        Matter,
         title,
         description,
         startTime: new Date(startTime),
@@ -38,6 +39,7 @@ const createElection = async (req, res) => {
     const emailPromises = candidates.map(candidate => {
       if (candidate.email) {
         return sendCandidateNotification(candidate.email, {
+          Matter: election.Matter,
           id: election.id,
           title: election.title,
           description: election.description,
@@ -212,6 +214,7 @@ const resendCandidateEmail = async (req, res) => {
     // 2. Call your existing sendCandidateNotification function
     // Pass the candidate's email and the necessary election data
     await sendCandidateNotification(candidateEmail, {
+      Matter: election.Matter,
       id: election.id,
       title: election.title,
       description: election.description,

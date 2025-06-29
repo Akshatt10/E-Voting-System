@@ -201,7 +201,7 @@ const VoteStatus = () => {
                       <React.Fragment key={item.id}>
                         <tr className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
-                          <td className="px-6 py-4 text-sm text-gray-900">{item.title.split(' ').slice(-3).join(' ')}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900">{item.Matter}</td>
                           <td className="px-6 py-4 text-sm text-gray-900">{item.title}</td>
                           <td className="px-6 py-4 text-sm">
                             <button
