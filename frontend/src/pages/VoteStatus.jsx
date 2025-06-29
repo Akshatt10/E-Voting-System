@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
-  Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit
+  Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit,
+  Play, CalendarClock // <-- Added missing icons
 } from "lucide-react";
+
+// Import the ElectionDetails component
+import ElectionDetails from '../pages/ElectionDetails'; // Adjust path as needed
 
 const VoteStatus = () => {
   const [elections, setElections] = useState([]);
@@ -9,8 +13,13 @@ const VoteStatus = () => {
   const [error, setError] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const [candidatesMap, setCandidatesMap] = useState({});
-  const [resendingEmail, setResendingEmail] = useState(null); // To track which email is being resent
-  const [emailResendStatus, setEmailResendStatus] = useState({ success: false, message: "" }); // For feedback
+  const [resendingEmail, setResendingEmail] = useState(null);
+  const [emailResendStatus, setEmailResendStatus] = useState({ success: false, message: "" });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // New state for handling details view
+  const [selectedElectionId, setSelectedElectionId] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const fetchElections = useCallback(async () => {
     setLoading(true);
@@ -66,16 +75,15 @@ const VoteStatus = () => {
     }
   };
 
-  // --- NEW EMAIL RESEND LOGIC ---
-  const handleResendEmail = async (electionId, candidateEmail) => { // Removed candidateName as it's not strictly needed for this API call
+  const handleResendEmail = async (electionId, candidateEmail) => {
     if (!candidateEmail) {
       setEmailResendStatus({ success: false, message: "Candidate email is missing." });
       setTimeout(() => setEmailResendStatus({ success: false, message: "" }), 5000);
       return;
     }
 
-    setResendingEmail(candidateEmail); // Set loading state for this specific email
-    setEmailResendStatus({ success: false, message: "" }); // Reset previous status
+    setResendingEmail(candidateEmail);
+    setEmailResendStatus({ success: false, message: "" });
 
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
@@ -85,14 +93,13 @@ const VoteStatus = () => {
     }
 
     try {
-      // Use the new backend route: /api/elections/resend-email/:electionId
       const res = await fetch(`/api/elections/resend-email/${electionId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
         },
-        body: JSON.stringify({ candidateEmail: candidateEmail }), // Send candidateEmail in the body
+        body: JSON.stringify({ candidateEmail: candidateEmail }),
       });
 
       if (!res.ok) {
@@ -106,12 +113,22 @@ const VoteStatus = () => {
       console.error("Error resending email:", err);
       setEmailResendStatus({ success: false, message: err.message || "Failed to resend email." });
     } finally {
-      setResendingEmail(null); // Clear loading state
-      // Optionally clear the success/error message after a few seconds
+      setResendingEmail(null);
       setTimeout(() => setEmailResendStatus({ success: false, message: "" }), 5000);
     }
   };
-  // --- END NEW EMAIL RESEND LOGIC ---
+
+  // Handle view election details
+  const handleViewElection = (electionId) => {
+    setSelectedElectionId(electionId);
+    setShowDetails(true);
+  };
+
+  // Handle back from details view
+  const handleBackFromDetails = () => {
+    setShowDetails(false);
+    setSelectedElectionId(null);
+  };
 
   useEffect(() => {
     fetchElections();
@@ -119,20 +136,64 @@ const VoteStatus = () => {
     return () => clearInterval(interval);
   }, [fetchElections]);
 
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getElectionStatus = (startTime, endTime, currentStatus) => {
-    const now = new Date();
+    const now = currentTime;
     const start = new Date(startTime);
     const end = new Date(endTime);
 
     if (currentStatus === "CANCELLED") {
-      return { text: "Cancelled", color: "red", bgColor: "bg-red-100", textColor: "text-red-800" };
-    } else if (currentStatus === "SCHEDULED" || now < start) {
-      return { text: "Scheduled", color: "blue", bgColor: "bg-blue-100", textColor: "text-blue-800" };
-    } else if ((currentStatus === "ACTIVE") || (now >= start && now <= end)) {
-      return { text: "Active", color: "green", bgColor: "bg-green-100", textColor: "text-green-800" };
-    } else {
-      return { text: "Completed", color: "green", bgColor: "bg-green-100", textColor: "text-green-800" };
+      return { 
+        text: "Cancelled", 
+        color: "red", 
+        bgColor: "bg-red-100", 
+        textColor: "text-red-800",
+        icon: XCircle,
+        pulseClass: ""
+      };
     }
+
+    if (now < start) {
+      return { 
+        text: "Scheduled", 
+        color: "blue", 
+        bgColor: "bg-blue-100", 
+        textColor: "text-blue-800",
+        icon: CalendarClock,
+        pulseClass: ""
+      };
+    } else if (now >= start && now <= end) {
+      return { 
+        text: "Ongoing", 
+        color: "orange", 
+        bgColor: "bg-orange-100", 
+        textColor: "text-orange-800",
+        icon: Play,
+        pulseClass: "animate-pulse"
+      };
+    } else if (now > end) {
+      return { 
+        text: "Completed", 
+        color: "green", 
+        bgColor: "bg-green-100", 
+        textColor: "text-green-800",
+        icon: CheckCircle,
+        pulseClass: ""
+      };
+    }
+
+    return { 
+      text: "Unknown", 
+      color: "gray", 
+      bgColor: "bg-gray-100", 
+      textColor: "text-gray-800",
+      icon: Info,
+      pulseClass: ""
+    };
   };
 
   const formatDateTime = (dateString) => {
@@ -147,6 +208,16 @@ const VoteStatus = () => {
       hour12: false
     });
   };
+
+  // If showing details, render the ElectionDetails component
+  if (showDetails && selectedElectionId) {
+    return (
+      <ElectionDetails 
+        electionId={selectedElectionId} 
+        onBack={handleBackFromDetails}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -203,7 +274,7 @@ const VoteStatus = () => {
                           <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
                           <td className="px-6 py-4 text-sm text-gray-900">{item.Matter}</td>
                           <td className="px-6 py-4 text-sm text-gray-900">{item.title}</td>
-                          <td className="px-6 py-4 text-sm">
+                          <td className="px-6 py-4 text-sm text-gray-900">
                             <button
                               onClick={async () => {
                                 const alreadyOpen = expandedRow === item.id;
@@ -230,7 +301,11 @@ const VoteStatus = () => {
                             </button>
                           </td>
                           <td className="px-6 py-4 text-sm">
-                            <button className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
+                            <button 
+                              onClick={() => handleViewElection(item.id)}
+                              className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 flex items-center"
+                            >
+                              <Eye className="mr-1" size={12} />
                               View
                             </button>
                           </td>
@@ -261,7 +336,7 @@ const VoteStatus = () => {
                                         <th className="px-4 py-2 border">Name</th>
                                         <th className="px-4 py-2 border">Email</th>
                                         <th className="px-4 py-2 border">Share</th>
-                                        <th className="px-4 py-2 border">Actions</th> {/* Changed "Email" to "Actions" */}
+                                        <th className="px-4 py-2 border">Actions</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -289,7 +364,7 @@ const VoteStatus = () => {
                                             <button
                                               onClick={() => handleResendEmail(item.id, cand.email, cand.name)}
                                               className="bg-blue-400 hover:bg-blue-500 text-black font-semibold py-1 px-3 rounded text-xs flex items-center justify-center"
-                                              disabled={resendingEmail === cand.email} // Disable button while sending
+                                              disabled={resendingEmail === cand.email}
                                             >
                                               {resendingEmail === cand.email ? (
                                                 <>
@@ -325,4 +400,4 @@ const VoteStatus = () => {
   );
 };
 
-export default VoteStatus;
+export default VoteStatus

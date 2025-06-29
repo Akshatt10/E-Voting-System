@@ -12,7 +12,9 @@ import {
   Info,
   Zap,
   Eye,
-  History
+  History,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 const RescheduleVoting = () => {
@@ -28,6 +30,7 @@ const RescheduleVoting = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showPreview, setShowPreview] = useState(false);
+  const [expandedDescription, setExpandedDescription] = useState(false);
   const navigate = useNavigate();
 
   // Get current date-time for min values
@@ -103,6 +106,8 @@ const RescheduleVoting = () => {
       setStartTime("");
       setEndTime("");
     }
+    // Reset description expansion when selection changes
+    setExpandedDescription(false);
   }, [selectedId, elections]);
 
   const getElectionStatus = (election) => {
@@ -129,6 +134,18 @@ const RescheduleVoting = () => {
       return `${hours} hour${hours > 1 ? 's' : ''}`;
     }
     return "";
+  };
+
+  // Helper function to truncate text
+  const truncateText = (text, maxLength = 150) => {
+    if (!text) return "";
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + "...";
+  };
+
+  // Helper function to check if description needs truncation
+  const needsTruncation = (text, maxLength = 150) => {
+    return text && text.length > maxLength;
   };
 
   const handleSubmit = async (e) => {
@@ -395,7 +412,30 @@ const RescheduleVoting = () => {
                   {selectedElection.description && (
                     <div>
                       <h4 className="font-semibold text-gray-700 text-sm mb-1">Description</h4>
-                      <p className="text-gray-600 text-sm">{selectedElection.description}</p>
+                      <div className="text-gray-600 text-sm">
+                        <p className={`transition-all duration-300 ${expandedDescription ? '' : 'line-clamp-3'}`}>
+                          {expandedDescription 
+                            ? selectedElection.description 
+                            : truncateText(selectedElection.description, 150)
+                          }
+                        </p>
+                        {needsTruncation(selectedElection.description, 150) && (
+                          <button
+                            onClick={() => setExpandedDescription(!expandedDescription)}
+                            className="inline-flex items-center mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors"
+                          >
+                            {expandedDescription ? (
+                              <>
+                                Show less <ChevronUp size={16} className="ml-1" />
+                              </>
+                            ) : (
+                              <>
+                                Read more <ChevronDown size={16} className="ml-1" />
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                   
@@ -465,6 +505,12 @@ const RescheduleVoting = () => {
         }
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>
