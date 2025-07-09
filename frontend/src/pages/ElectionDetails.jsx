@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react"; // Import useRef
+import html2pdf from 'html2pdf.js'; // Import html2pdf
 import {
-  ArrowLeft, Calendar, Clock, Users, FileText, MapPin, 
+  ArrowLeft, Calendar, Clock, Users, FileText, MapPin,
   CheckCircle, XCircle, Play, CalendarClock, AlertCircle,
   Mail, Phone, Building, Info, Globe, Download, Eye,
-  Edit, Trash2, Share2, Printer, Copy
+  Edit, Trash2, Share2, Printer, Copy, Loader
 } from "lucide-react";
 
 const ElectionDetails = ({ electionId, onBack }) => {
@@ -12,6 +13,9 @@ const ElectionDetails = ({ electionId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isDownloading, setIsDownloading] = useState(false); // New state for download
+  const [isSendingReminder, setIsSendingReminder] = useState(false); // New state for reminder
+  const contentRef = useRef(null); // Ref for the content to be downloaded
 
   useEffect(() => {
     fetchElectionDetails();
@@ -37,11 +41,11 @@ const ElectionDetails = ({ electionId, onBack }) => {
           Authorization: "Bearer " + accessToken,
         },
       });
-      
+
       if (!electionRes.ok) {
         throw new Error("Failed to fetch election details");
       }
-      
+
       const electionData = await electionRes.json();
       setElection(electionData.election);
 
@@ -51,9 +55,12 @@ const ElectionDetails = ({ electionId, onBack }) => {
           Authorization: "Bearer " + accessToken,
         },
       });
-      
+
       if (candidatesRes.ok) {
         const candidatesData = await candidatesRes.json();
+        // Assuming candidatesData.candidates might contain a `voted` status.
+        // For this example, let's assume if a candidate is listed, they *might* not have voted yet for reminders,
+        // but for a real system, you'd need a clear `hasVoted` flag from the backend.
         setCandidates(candidatesData.candidates || []);
       }
     } catch (err) {
@@ -64,16 +71,82 @@ const ElectionDetails = ({ electionId, onBack }) => {
     }
   };
 
+  const handleDownloadReport = async () => {
+    setIsDownloading(true);
+    const element = contentRef.current;
+    if (!element) {
+      alert("Content to download not found.");
+      setIsDownloading(false);
+      return;
+    }
+
+    const opt = {
+      margin: 1,
+      filename: `election-report-${election.id}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+      // You could add a success toast here
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to download report. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    setIsSendingReminder(true);
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      alert("You are not logged in. Please log in to send reminders.");
+      setIsSendingReminder(false);
+      return;
+    }
+
+    try {
+      // In a real application, you'd send specific candidate IDs that haven't voted,
+      // or let the backend determine based on electionId.
+      // For this example, we'll just send the electionId.
+      const response = await fetch(`/api/elections/resend-email/${electionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': "Bearer " + accessToken,
+        },
+
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send reminders.");
+      }
+
+      alert("Reminders sent successfully!");
+      // You might want to refresh candidate status here if your backend updates it
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
+
   const getElectionStatus = (startTime, endTime, currentStatus) => {
     const now = currentTime;
     const start = new Date(startTime);
     const end = new Date(endTime);
 
     if (currentStatus === "CANCELLED") {
-      return { 
-        text: "Cancelled", 
-        color: "red", 
-        bgColor: "bg-red-100", 
+      return {
+        text: "Cancelled",
+        color: "red",
+        bgColor: "bg-red-100",
         textColor: "text-red-800",
         icon: XCircle,
         pulseClass: ""
@@ -81,38 +154,38 @@ const ElectionDetails = ({ electionId, onBack }) => {
     }
 
     if (now < start) {
-      return { 
-        text: "Scheduled", 
-        color: "blue", 
-        bgColor: "bg-blue-100", 
+      return {
+        text: "Scheduled",
+        color: "blue",
+        bgColor: "bg-blue-100",
         textColor: "text-blue-800",
         icon: CalendarClock,
         pulseClass: ""
       };
     } else if (now >= start && now <= end) {
-      return { 
-        text: "Ongoing", 
-        color: "orange", 
-        bgColor: "bg-orange-100", 
+      return {
+        text: "Ongoing",
+        color: "orange",
+        bgColor: "bg-orange-100",
         textColor: "text-orange-800",
         icon: Play,
         pulseClass: "animate-pulse"
       };
     } else if (now > end) {
-      return { 
-        text: "Completed", 
-        color: "green", 
-        bgColor: "bg-green-100", 
+      return {
+        text: "Completed",
+        color: "green",
+        bgColor: "bg-green-100",
         textColor: "text-green-800",
         icon: CheckCircle,
         pulseClass: ""
       };
     }
 
-    return { 
-      text: "Unknown", 
-      color: "gray", 
-      bgColor: "bg-gray-100", 
+    return {
+      text: "Unknown",
+      color: "gray",
+      bgColor: "bg-gray-100",
       textColor: "text-gray-800",
       icon: Info,
       pulseClass: ""
@@ -141,7 +214,7 @@ const ElectionDetails = ({ electionId, onBack }) => {
     const diffMs = end - start;
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (diffHours > 0) {
       return `${diffHours}h ${diffMinutes}m`;
     }
@@ -212,7 +285,7 @@ const ElectionDetails = ({ electionId, onBack }) => {
             <ArrowLeft className="mr-2" size={20} />
             Back to Elections
           </button>
-          
+
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{election.title}</h1>
@@ -224,25 +297,12 @@ const ElectionDetails = ({ electionId, onBack }) => {
                 <span className="text-gray-500 text-sm">ID: {election.id}</span>
               </div>
             </div>
-            
-            <div className="flex space-x-2">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                <Edit className="mr-2" size={16} />
-                Edit
-              </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                <Share2 className="mr-2" size={16} />
-                Share
-              </button>
-              <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
-                <Printer className="mr-2" size={16} />
-                Print
-              </button>
-            </div>
+
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content to be downloaded */}
+        <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Matter Details */}
@@ -336,7 +396,6 @@ const ElectionDetails = ({ electionId, onBack }) => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Share %</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -400,7 +459,7 @@ const ElectionDetails = ({ electionId, onBack }) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                     End Date & Time
@@ -413,7 +472,7 @@ const ElectionDetails = ({ electionId, onBack }) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                     Duration
@@ -450,13 +509,31 @@ const ElectionDetails = ({ electionId, onBack }) => {
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-2">
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                  <Download className="mr-2" size={16} />
-                  Download Report
+                <button
+                  onClick={handleDownloadReport}
+                  disabled={isDownloading}
+                  className={`w-full bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center
+                    ${isDownloading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+                >
+                  {isDownloading ? (
+                    <Loader className="mr-2 animate-spin" size={16} />
+                  ) : (
+                    <Download className="mr-2" size={16} />
+                  )}
+                  {isDownloading ? 'Downloading...' : 'Download Report'}
                 </button>
-                <button className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                  <Mail className="mr-2" size={16} />
-                  Send Reminder
+                <button
+                  onClick={handleSendReminder}
+                  disabled={isSendingReminder}
+                  className={`w-full bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center justify-center
+                    ${isSendingReminder ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'}`}
+                >
+                  {isSendingReminder ? (
+                    <Loader className="mr-2 animate-spin" size={16} />
+                  ) : (
+                    <Mail className="mr-2" size={16} />
+                  )}
+                  {isSendingReminder ? 'Sending...' : 'Send Reminder'}
                 </button>
                 <button className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
                   <Trash2 className="mr-2" size={16} />

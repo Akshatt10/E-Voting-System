@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 const register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone } = req.body;
+    const { email,IBBI, password, firstName, lastName, phone } = req.body;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -28,6 +28,7 @@ const register = async (req, res) => {
     const user = await prisma.user.create({
     data: {
       email,
+      IBBI:  IBBI,
       firstname: firstName,
       lastname: lastName,
       phone: phone,
@@ -49,6 +50,7 @@ const register = async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
+          IBBI: user.IBBI,
           firstName: user.firstname,
           lastName: user.lastname,
           phone: user.phone,
@@ -207,12 +209,13 @@ const logoutAll = async (req, res) => {
 
 const currentUser = (req, res) => {
   try {
-    const { firstname, lastname, email } = req.user;
+    const { firstname, lastname, email, IBBI } = req.user;
 
     res.json({
       firstname,
       lastname,
-      email
+      email,
+      IBBI,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching user data' });
@@ -222,23 +225,52 @@ const currentUser = (req, res) => {
 
 
 const getProfile = async (req, res) => {
+  const user = req.user;
+  
+  res.json({
+    success: true,
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstname,
+        lastName: user.lastname
+      }
+    }
+  });
+
+};
+
+// Update profile controller
+const updateProfile = async (req, res) => {
   try {
-    const user = req.user;
-    
-    res.json({
-      success: true,
+    const userId = req.user.id;
+    const { firstName, lastName, phone } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
       data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstname,
-          lastName: user.lastname
-        }
+        firstname: firstName,
+        lastname: lastName,
+        phone: phone
       }
     });
 
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          firstName: updatedUser.firstname,
+          lastName: updatedUser.lastname,
+          phone: updatedUser.phone
+        }
+      }
+    });
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -253,5 +285,6 @@ module.exports = {
   logout,
   logoutAll,
   getProfile,
-  currentUser
+  currentUser,
+  updateProfile
 };

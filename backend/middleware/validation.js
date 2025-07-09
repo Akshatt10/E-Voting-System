@@ -5,6 +5,8 @@ const validateRegistration = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email'),
+  body('IBBI')
+    .isLength({ min: 12, max: 12 }),
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')

@@ -7,7 +7,8 @@ const {
   getAllElections,
   getElectionById,
   getCandidatesByElectionId,
-  resendCandidateEmail
+  resendCandidateEmail,
+  getUserElections
 } = require('../controllers/electionController');
 
 const { authenticateToken } = require('../middleware/auth');
@@ -15,12 +16,15 @@ const { authenticateToken } = require('../middleware/auth');
 router.post('/create', authenticateToken, createElection);
 router.post('/cancel/:id', authenticateToken, cancelElection);
 router.put('/reschedule/:id', authenticateToken, rescheduleElection);
-router.get('/', authenticateToken, getAllElections);
-router.get('/:id', getElectionById);
 
+// ✅ Put specific routes BEFORE parameterized routes
+router.get('/user-elections', authenticateToken, getUserElections);
 router.get('/candidates/:electionId', getCandidatesByElectionId);
-
 router.post('/resend-email/:electionId', authenticateToken, resendCandidateEmail);
+
+// ✅ Put general routes AFTER specific routes
+router.get('/', authenticateToken, getAllElections);
+router.get('/:id', getElectionById);  // This should be LAST
 
 
 

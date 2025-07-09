@@ -12,9 +12,13 @@ const VoteStatus = {
 
 const createElection = async (req, res) => {
   try {
+    const userId = req.user?.id; 
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: User not found in request' });
+    }
+
     const { Matter, title, description, startTime, endTime, candidates } = req.body;
-    
-    // Create the election
+
     const election = await prisma.election.create({
       data: {
         Matter,
@@ -23,6 +27,9 @@ const createElection = async (req, res) => {
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         isPublished: true,
+        createdBy: {
+          connect: { id: userId }
+        },
         candidates: {
           create: candidates.map(candidate => ({
             name: candidate.name,
@@ -32,7 +39,7 @@ const createElection = async (req, res) => {
         }
       },
       include: {
-        candidates: true 
+        candidates: true
       }
     });
 
@@ -47,27 +54,27 @@ const createElection = async (req, res) => {
           endTime: election.endTime
         });
       }
-    }).filter(Boolean); // Remove undefined promises
+    }).filter(Boolean); // removes undefineds
 
-    // Send emails asynchronously (don't wait for them)
     Promise.all(emailPromises)
       .then(() => console.log('All candidate emails sent successfully'))
       .catch(error => console.error('Error sending emails:', error));
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       election,
       message: `Election created successfully! Notification emails sent to ${emailPromises.length} candidates.`
     });
 
   } catch (error) {
     console.error('Create Election Error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to create election' 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create election'
     });
   }
 };
+
 
 const cancelElection = async (req, res) => {
   try {
@@ -139,6 +146,28 @@ const getAllElections = async (req, res) => {
   } catch (error) {
     console.error('Get Elections Error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch elections' });
+  }
+};
+
+// Fetch elections created by the logged-in user
+const getUserElections = async (req, res) => {
+  const userId = req.user.id;
+  console.log('JWT userId:', userId);
+  console.log('Expected createdById from DB:', 'cmcqmulwd0000uli8hcb3hklx');
+
+  try {
+    const elections = await prisma.election.findMany({
+      where: { createdById: userId },
+      include: {
+        candidates: true
+      },
+      orderBy: { startTime: 'desc' }
+    });
+
+    res.json({ success: true, elections });
+  } catch (err) {
+    console.error('GetUserElections error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch user elections' });
   }
 };
 
@@ -235,6 +264,7 @@ module.exports = {
   cancelElection,
   rescheduleElection,
   getAllElections,
+  getUserElections,
   getElectionById,
   getCandidatesByElectionId,
   resendCandidateEmail

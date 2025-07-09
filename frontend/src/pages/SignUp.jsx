@@ -3,6 +3,7 @@ import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, Shield, AlertCircle, Ch
 import { useNavigate } from 'react-router-dom';
 const Signup = () => {
   const [formData, setFormData] = useState({
+    IBBI: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -58,7 +59,7 @@ const handleSubmit = async (e) => {
       localStorage.setItem('accessToken', data.accessToken);
     }
 
-    navigate('/dashboard');
+    navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
   } catch (err) {
     console.error('Register error:', err);
     setError(err.message || 'Registration failed. Please try again.');
@@ -109,6 +110,27 @@ const handleSubmit = async (e) => {
           )}
 
           <div className="space-y-5">
+            {/* IBBI Number Field */}
+            <div className="group">
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                IBBI Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="w-5 h-5 text-white/40" />
+                </div>
+                <input
+                  type="text"
+                  name="IBBI"
+                  value={formData.IBBI}
+                  onChange={handleChange}
+                  placeholder="Enter your IBBI number"
+                  required
+                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                />
+              </div>
+            </div>
+
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="group">

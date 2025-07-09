@@ -33,7 +33,7 @@ const VoteStatus = () => {
     }
 
     try {
-      const res = await fetch("/api/elections", {
+      const res = await fetch("/api/elections/user-elections", {
         headers: {
           Authorization: "Bearer " + accessToken,
         },
