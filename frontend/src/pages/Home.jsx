@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { ShieldCheck, Users, Clock, FileText, BarChart2, Mail } from 'lucide-react'; // Importing icons
+import logo from '../assets/Home.png'; // Assuming you have a logo image
 
 const Home = () => {
   return (
@@ -49,7 +50,7 @@ const Home = () => {
 
         <div className="md:w-1/2 mb-12 md:mb-0 md:pl-16"> {/* Added padding-left for spacing */}
           <img
-            src="https://cdn-icons-png.flaticon.com/512/4345/4345565.png"
+            src={logo}
             alt="Digital Voting Illustration"
             className="w-full max-w-lg mx-auto animate-fade-in-up"
           />

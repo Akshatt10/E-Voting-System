@@ -1,5 +1,105 @@
-import React, { useState, useEffect } from "react";
-import { Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail, Scale } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail, Scale, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered } from "lucide-react";
+
+const RichTextEditor = ({ form, setForm }) => {
+  const editorRef = useRef(null);
+  const isUserTyping = useRef(false);
+
+  const handleDescriptionChange = () => {
+    if (editorRef.current) {
+      isUserTyping.current = true;
+      setForm(prevForm => ({
+        ...prevForm,
+        description: editorRef.current.innerHTML,
+      }));
+    }
+  };
+
+  const execCommand = (command, value = null) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+    handleDescriptionChange();
+  };
+
+  useEffect(() => {
+    if (editorRef.current && !isUserTyping.current && form.description !== editorRef.current.innerHTML) {
+      editorRef.current.innerHTML = form.description || '';
+    }
+    isUserTyping.current = false;
+    // eslint-disable-next-line
+  }, [form.description]);
+
+  return (
+    <div className="border-2 border-gray-200 rounded-xl overflow-hidden focus-within:border-indigo-500 transition-colors duration-200 relative">
+      {/* Toolbar */}
+      <div className="bg-gray-50 border-b border-gray-200 p-3">
+        <div className="flex flex-wrap gap-1 items-center">
+          {/* Text Formatting */}
+          <div className="flex border-r border-gray-300 pr-2 mr-2">
+            <button type="button" onClick={() => execCommand('bold')} className="p-2 hover:bg-gray-200 rounded" title="Bold">
+              <Bold size={16} />
+            </button>
+            <button type="button" onClick={() => execCommand('italic')} className="p-2 hover:bg-gray-200 rounded" title="Italic">
+              <Italic size={16} />
+            </button>
+            <button type="button" onClick={() => execCommand('underline')} className="p-2 hover:bg-gray-200 rounded" title="Underline">
+              <Underline size={16} />
+            </button>
+          </div>
+          {/* Alignment */}
+          <div className="flex border-r border-gray-300 pr-2 mr-2">
+            <button type="button" onClick={() => execCommand('justifyLeft')} className="p-2 hover:bg-gray-200 rounded" title="Align Left">
+              <AlignLeft size={16} />
+            </button>
+            <button type="button" onClick={() => execCommand('justifyCenter')} className="p-2 hover:bg-gray-200 rounded" title="Align Center">
+              <AlignCenter size={16} />
+            </button>
+            <button type="button" onClick={() => execCommand('justifyRight')} className="p-2 hover:bg-gray-200 rounded" title="Align Right">
+              <AlignRight size={16} />
+            </button>
+          </div>
+          {/* Lists */}
+          <div className="flex border-r border-gray-300 pr-2 mr-2">
+            <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-2 hover:bg-gray-200 rounded" title="Bullet List">
+              <List size={16} />
+            </button>
+            <button type="button" onClick={() => execCommand('insertOrderedList')} className="p-2 hover:bg-gray-200 rounded" title="Numbered List">
+              <ListOrdered size={16} />
+            </button>
+          </div>
+          {/* Font Size */}
+          <div className="flex items-center">
+            <select
+              onChange={(e) => execCommand('fontSize', e.target.value)}
+              className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+              title="Font Size"
+              defaultValue="3"
+            >
+              <option value="1">Small</option>
+              <option value="3">Normal</option>
+              <option value="5">Large</option>
+              <option value="7">Extra Large</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      {/* Editable Area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        className="min-h-[120px] p-4 focus:outline-none text-gray-800"
+        onInput={handleDescriptionChange}
+        suppressContentEditableWarning={true}
+      />
+      {/* Placeholder */}
+      {!form.description && (
+        <div className="absolute top-[calc(3rem+1rem+8px)] left-4 text-gray-400 pointer-events-none">
+          Provide additional details about this election...
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CreateVoting = () => {
   const [form, setForm] = useState({
@@ -358,17 +458,11 @@ const CreateVoting = () => {
 
                   <div className="group">
                     <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
-                      Description
+                      Resolution
                     </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={form.description}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 resize-none"
-                      rows={4}
-                      placeholder="Provide additional details about this election..."
-                    />
+                    <div className="relative">
+                      <RichTextEditor form={form} setForm={setForm} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -601,11 +695,11 @@ const CreateVoting = () => {
                     Create Election
                   </>
                 )}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+        </button>
+      )}
+    </div>
+  </div>
+</div>
       {currentStep === 3 && form.title && (
         <div className="mt-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Election Summary</h3>

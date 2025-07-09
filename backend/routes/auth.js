@@ -13,7 +13,8 @@ const {
   logout,
   logoutAll,
   getProfile,
-  currentUser
+  currentUser,
+  updateProfile
 } = require('../controllers/authControllers');
 
 const router = express.Router();
@@ -57,6 +58,11 @@ router.post('/login',
 router.post('/refresh-token',
   refreshLimiter,
   refreshToken
+);
+
+router.post('/update-profile', 
+  authenticateToken, 
+  updateProfile
 );
 
 router.post('/logout', logout);

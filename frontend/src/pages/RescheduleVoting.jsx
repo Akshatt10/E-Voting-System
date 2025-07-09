@@ -44,7 +44,7 @@ const RescheduleVoting = () => {
     const fetchElections = async () => {
       setFetchLoading(true);
       try {
-        const res = await fetch("/api/elections", {
+        const res = await fetch("/api/elections/user-elections", {
           headers: {
             Authorization: "Bearer " + localStorage.getItem("accessToken"),
           },

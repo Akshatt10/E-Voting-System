@@ -13,7 +13,7 @@ const CancelVoting = () => {
   useEffect(() => {
     const fetchElections = async () => {
       try {
-        const res = await fetch("/api/elections", {
+        const res = await fetch("/api/elections/user-elections", {
           headers: {
             Authorization: "Bearer " + localStorage.getItem("accessToken"),
           },
