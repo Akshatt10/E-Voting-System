@@ -12,15 +12,16 @@ const Signup = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(''); // Clear error when user starts typing
-    
+    // --- MODIFIED: Clear errors when user types ---
+    setFormErrors({});  // Clear error when user starts typing
+
     // Calculate password strength
     if (e.target.name === 'password') {
       const password = e.target.value;
@@ -34,39 +35,56 @@ const Signup = () => {
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setFormErrors({});
 
-  try {
-    const res = await fetch('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const res = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Registration failed');
+      // if (!res.ok || !data.success) {
+      //   throw new Error(data.message || 'Registration failed');
+      // }
+
+      // // Save token (if returned)
+      // if (data.accessToken) {
+      //   localStorage.setItem('accessToken', data.accessToken);
+      // }
+      if (!res.ok) {
+        // --- THIS IS THE KEY CHANGE ---
+        // Check if the backend sent a detailed errors array
+        if (data.errors && Array.isArray(data.errors)) {
+          // Convert the array of errors into an object for easy lookup
+          const newErrors = {};
+          data.errors.forEach(err => {
+            newErrors[err.path] = err.msg; // e.g., { password: "Password must be..." }
+          });
+          setFormErrors(newErrors);
+        } else {
+          // If no detailed errors, show a general error
+          setFormErrors({ general: data.message || 'Registration failed' });
+        }
+        // --- END OF KEY CHANGE ---
+        return; // Stop execution since there was an error
+      }
+
+      navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
+    } catch (err) {
+      console.error('Register error:', err);
+      setFormErrors({ general: 'Registration failed. Please check your connection and try again.' });
+    } finally {
+      setLoading(false);
     }
-
-    // Save token (if returned)
-    if (data.accessToken) {
-      localStorage.setItem('accessToken', data.accessToken);
-    }
-
-    navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
-  } catch (err) {
-    console.error('Register error:', err);
-    setError(err.message || 'Registration failed. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   const getPasswordStrengthColor = () => {
     if (passwordStrength <= 1) return 'bg-red-500';
     if (passwordStrength <= 3) return 'bg-yellow-500';
@@ -79,7 +97,7 @@ const handleSubmit = async (e) => {
     return 'Strong';
   };
 
-  return (
+ return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-800 to-blue-800 flex items-center justify-center px-4 py-8 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10"></div>
@@ -100,16 +118,17 @@ const handleSubmit = async (e) => {
 
         {/* Signup Card */}
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-2xl">
-          {error && (
+          {/* MODIFIED: Display general errors here */}
+          {formErrors.general && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-400/30 rounded-xl">
               <div className="flex items-center text-red-200">
                 <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+                <span className="text-sm">{formErrors.general}</span>
               </div>
             </div>
           )}
 
-          <div className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Registration number Field */}
             <div className="group">
               <label className="block text-sm font-medium text-white/80 mb-2">
@@ -126,9 +145,12 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   placeholder="Enter your Registration number"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                  className={`w-full pl-12 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    formErrors.IBBI ? 'border-red-400/50 focus:ring-red-500/30' : 'border-white/20 focus:ring-white/30'
+                  }`}
                 />
               </div>
+              {formErrors.IBBI && <p className="text-red-300 text-xs mt-2 pl-1">{formErrors.IBBI}</p>}
             </div>
 
             {/* Name Fields */}
@@ -148,9 +170,12 @@ const handleSubmit = async (e) => {
                     onChange={handleChange}
                     placeholder="First name"
                     required
-                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                    className={`w-full pl-12 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        formErrors.firstName ? 'border-red-400/50 focus:ring-red-500/30' : 'border-white/20 focus:ring-white/30'
+                    }`}
                   />
                 </div>
+                {formErrors.firstName && <p className="text-red-300 text-xs mt-2 pl-1">{formErrors.firstName}</p>}
               </div>
 
               <div className="group">
@@ -168,9 +193,12 @@ const handleSubmit = async (e) => {
                     onChange={handleChange}
                     placeholder="Last name"
                     required
-                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                    className={`w-full pl-12 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        formErrors.lastName ? 'border-red-400/50 focus:ring-red-500/30' : 'border-white/20 focus:ring-white/30'
+                    }`}
                   />
                 </div>
+                {formErrors.lastName && <p className="text-red-300 text-xs mt-2 pl-1">{formErrors.lastName}</p>}
               </div>
             </div>
 
@@ -190,9 +218,12 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   placeholder="Enter your email"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                  className={`w-full pl-12 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    formErrors.email ? 'border-red-400/50 focus:ring-red-500/30' : 'border-white/20 focus:ring-white/30'
+                  }`}
                 />
               </div>
+              {formErrors.email && <p className="text-red-300 text-xs mt-2 pl-1">{formErrors.email}</p>}
             </div>
 
             {/* Phone Field */}
@@ -211,9 +242,12 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   placeholder="Enter your phone number"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                  className={`w-full pl-12 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    formErrors.phone ? 'border-red-400/50 focus:ring-red-500/30' : 'border-white/20 focus:ring-white/30'
+                  }`}
                 />
               </div>
+              {formErrors.phone && <p className="text-red-300 text-xs mt-2 pl-1">{formErrors.phone}</p>}
             </div>
 
             {/* Password Field */}
@@ -232,7 +266,9 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   placeholder="Create a strong password"
                   required
-                  className="w-full pl-12 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
+                  className={`w-full pl-12 pr-12 py-3 bg-white/10 border rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    formErrors.password ? 'border-red-400/50 focus:ring-red-500/30' : 'border-white/20 focus:ring-white/30'
+                  }`}
                 />
                 <button
                   type="button"
@@ -242,6 +278,7 @@ const handleSubmit = async (e) => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {formErrors.password && <p className="text-red-300 text-xs mt-2 pl-1">{formErrors.password}</p>}
               
               {/* Password Strength Indicator */}
               {formData.password && (
@@ -285,7 +322,6 @@ const handleSubmit = async (e) => {
             {/* Signup Button */}
             <button
               type="submit"
-              onClick={handleSubmit}
               disabled={loading}
               className="w-full bg-gradient-to-r from-white to-white/90 text-purple-900 py-4 rounded-xl font-semibold hover:from-white/90 hover:to-white/80 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
@@ -301,7 +337,7 @@ const handleSubmit = async (e) => {
                 </>
               )}
             </button>
-          </div>
+          </form>
 
           {/* Footer Links */}
           <div className="mt-8 text-center">
@@ -333,6 +369,6 @@ const handleSubmit = async (e) => {
       </div>
     </div>
   );
-};
+}
 
 export default Signup;
