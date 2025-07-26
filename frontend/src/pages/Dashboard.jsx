@@ -597,7 +597,7 @@ const Dashboard = () => {
                       <li key={event.id} className="border-b border-gray-100 pb-2 last:border-b-0 last:pb-0">
                         <p className="font-medium text-gray-900">{event.title}</p>
                         <p className="text-sm text-gray-600">Starts: {new Date(event.startTime).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500 line-clamp-1">{event.description}</p>
+                        {/* <p className="text-xs text-gray-500 line-clamp-1">{event.description}</p> */}
                       </li>
                     ))}
                   </ul>

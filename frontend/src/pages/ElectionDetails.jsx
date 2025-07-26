@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useRef } from "react"; // Import useRef
-import html2pdf from 'html2pdf.js'; // Import html2pdf
+import React, { useEffect, useState, useRef } from "react";
+import html2pdf from 'html2pdf.js';
 import {
   ArrowLeft, Calendar, Clock, Users, FileText, MapPin,
   CheckCircle, XCircle, Play, CalendarClock, AlertCircle,
-  Mail, Phone, Building, Info, Globe, Download, Eye,
-  Edit, Trash2, Share2, Printer, Copy, Loader
+  Mail, Phone, Globe, Download, Copy, Loader, Trash2
 } from "lucide-react";
 
 const ElectionDetails = ({ electionId, onBack }) => {
@@ -13,126 +12,130 @@ const ElectionDetails = ({ electionId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isDownloading, setIsDownloading] = useState(false); // New state for download
-  const [isSendingReminder, setIsSendingReminder] = useState(false); // New state for reminder
-  const contentRef = useRef(null); // Ref for the content to be downloaded
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const contentRef = useRef(null);
 
   useEffect(() => {
+
+    const fetchElectionDetails = async () => {
+      setLoading(true);
+      setError("");
+      const accessToken = localStorage.getItem("accessToken");
+
+      if (!accessToken) {
+        setError("You are not logged in. Please log in.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/elections/${electionId}`, {
+          headers: { Authorization: "Bearer " + accessToken },
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Failed to fetch election details");
+        }
+
+        const data = await res.json();
+        if (data.success && data.election) {
+          setElection(data.election);
+          // Populate candidates from the same API call
+          setCandidates(data.election.candidates || []);
+        } else {
+          throw new Error("Election data not found in response.");
+        }
+
+      } catch (err) {
+        console.error("Error fetching election details:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchElectionDetails();
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, [electionId]);
 
-  const fetchElectionDetails = async () => {
-    setLoading(true);
-    setError("");
+  // const handleDownloadReport = async () => {
+  //   setIsDownloading(true);
+  //   const element = contentRef.current;
+  //   if (!element) {
+  //     alert("Content to download not found.");
+  //     setIsDownloading(false);
+  //     return;
+  //   }
 
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      setError("You are not logged in. Please log in to view election details.");
-      setLoading(false);
-      return;
-    }
+  //   const opt = {
+  //     margin: 1,
+  //     filename: `election-report-${election.id}.pdf`,
+  //     image: { type: 'jpeg', quality: 0.98 },
+  //     html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+  //     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+  //   };
 
-    try {
-      // Fetch election details
-      const electionRes = await fetch(`/api/elections/${electionId}`, {
-        headers: {
-          Authorization: "Bearer " + accessToken,
-        },
-      });
-
-      if (!electionRes.ok) {
-        throw new Error("Failed to fetch election details");
-      }
-
-      const electionData = await electionRes.json();
-      setElection(electionData.election);
-
-      // Fetch candidates
-      const candidatesRes = await fetch(`/api/elections/candidates/${electionId}`, {
-        headers: {
-          Authorization: "Bearer " + accessToken,
-        },
-      });
-
-      if (candidatesRes.ok) {
-        const candidatesData = await candidatesRes.json();
-        // Assuming candidatesData.candidates might contain a `voted` status.
-        // For this example, let's assume if a candidate is listed, they *might* not have voted yet for reminders,
-        // but for a real system, you'd need a clear `hasVoted` flag from the backend.
-        setCandidates(candidatesData.candidates || []);
-      }
-    } catch (err) {
-      console.error("Error fetching election details:", err);
-      setError(err.message || "Could not load election details.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadReport = async () => {
-    setIsDownloading(true);
-    const element = contentRef.current;
-    if (!element) {
-      alert("Content to download not found.");
-      setIsDownloading(false);
-      return;
-    }
-
-    const opt = {
-      margin: 1,
-      filename: `election-report-${election.id}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    try {
-      await html2pdf().set(opt).from(element).save();
-      // You could add a success toast here
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      alert("Failed to download report. Please try again.");
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+  //   try {
+  //     await html2pdf().set(opt).from(element).save();
+  //     // You could add a success toast here
+  //   } catch (error) {
+  //     console.error("Error generating PDF:", error);
+  //     alert("Failed to download report. Please try again.");
+  //   } finally {
+  //     setIsDownloading(false);
+  //   }
+  // };
 
   const handleSendReminder = async () => {
-    setIsSendingReminder(true);
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      alert("You are not logged in. Please log in to send reminders.");
-      setIsSendingReminder(false);
+    if (!window.confirm("Are you sure you want to send a voting reminder to all candidates who haven't voted?")) {
       return;
     }
-
+    setIsSubmitting(true);
+    const accessToken = localStorage.getItem("accessToken");
     try {
-      // In a real application, you'd send specific candidate IDs that haven't voted,
-      // or let the backend determine based on electionId.
-      // For this example, we'll just send the electionId.
-      const response = await fetch(`/api/elections/resend-email/${electionId}`, {
+      // NOTE: This assumes you have a backend endpoint to send reminders to all non-voters.
+      // We are using the existing 'resend-email' for simplicity, which may need to be adapted
+      // in your backend to handle bulk reminders if desired.
+      const response = await fetch(`/api/elections/${electionId}/reminders`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': "Bearer " + accessToken,
-        },
-
+        headers: { 'Authorization': "Bearer " + accessToken },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send reminders.");
-      }
-
-      alert("Reminders sent successfully!");
-      // You might want to refresh candidate status here if your backend updates it
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to send reminders.");
+      alert(data.message || "Reminders sent successfully!");
     } catch (error) {
       console.error("Error sending reminder:", error);
       alert(`Error: ${error.message}`);
     } finally {
-      setIsSendingReminder(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- NEW: Handler for canceling the election ---
+  const handleCancelElection = async () => {
+    if (!window.confirm("Are you sure you want to cancel this election? This action cannot be undone.")) {
+      return;
+    }
+    setIsSubmitting(true);
+    const accessToken = localStorage.getItem("accessToken");
+    try {
+      const response = await fetch(`/api/elections/cancel/${electionId}`, {
+        method: 'POST', // Make sure your route accepts POST
+        headers: { 'Authorization': "Bearer " + accessToken },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to cancel election.");
+      alert("Election cancelled successfully!");
+      onBack(); // Go back to the previous page
+    } catch (error) {
+      console.error("Error canceling election:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -227,45 +230,15 @@ const ElectionDetails = ({ electionId, onBack }) => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            <p className="ml-3 text-lg text-gray-700">Loading election details...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-40"><Loader className="animate-spin h-8 w-8 text-indigo-600" /><p className="ml-3">Loading...</p></div>;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-            <div className="flex items-center">
-              <AlertCircle className="text-red-500 mr-3" size={24} />
-              <span className="text-red-700 font-medium">{error}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="bg-red-50 border-l-4 border-red-500 p-4"><AlertCircle className="inline mr-2" />{error}</div>;
   }
 
   if (!election) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center py-12">
-            <Info className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No election found</h3>
-            <p className="mt-1 text-sm text-gray-500">The requested election could not be found.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <div>No election found.</div>;
   }
 
   const status = getElectionStatus(election.startTime, election.endTime, election.status);
@@ -278,14 +251,10 @@ const ElectionDetails = ({ electionId, onBack }) => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center text-indigo-600 hover:text-indigo-800 mb-4 font-medium"
-          >
+          <button onClick={onBack} className="flex items-center text-indigo-600 hover:text-indigo-800 mb-4 font-medium">
             <ArrowLeft className="mr-2" size={20} />
             Back to Elections
           </button>
-
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{election.title}</h1>
@@ -297,15 +266,15 @@ const ElectionDetails = ({ electionId, onBack }) => {
                 <span className="text-gray-500 text-sm">ID: {election.id}</span>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Main Content to be downloaded */}
+        {/* Main Content */}
         <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Matter Details */}
+
+            {/* --- UPDATED: Matter Details now shows Resolutions --- */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                 <FileText className="mr-2 text-indigo-600" size={20} />
@@ -316,20 +285,26 @@ const ElectionDetails = ({ electionId, onBack }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name of Matter</label>
                   <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{election.Matter || 'Not specified'}</p>
                 </div>
+
+                {/* New Resolutions Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <p className="text-gray-900 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
-                    {election.description || 'No description provided'}
-                  </p>
-                </div>
-                {election.objectives && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Objectives</label>
-                    <p className="text-gray-900 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
-                      {election.objectives}
-                    </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Resolutions</label>
+                  <div className="space-y-4">
+                    {election.resolutions && election.resolutions.length > 0 ? (
+                      election.resolutions.map((res, index) => (
+                        <div key={res.id || index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                          <h4 className="font-semibold text-gray-800 mb-2">{res.title}</h4>
+                          <div
+                            className="prose prose-sm max-w-none text-gray-700"
+                            dangerouslySetInnerHTML={{ __html: res.description }}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 bg-gray-50 p-3 rounded-lg">No resolutions provided.</p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
@@ -509,35 +484,25 @@ const ElectionDetails = ({ electionId, onBack }) => {
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-2">
-                <button
-                  onClick={handleDownloadReport}
-                  disabled={isDownloading}
-                  className={`w-full bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center
-                    ${isDownloading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
-                >
-                  {isDownloading ? (
-                    <Loader className="mr-2 animate-spin" size={16} />
-                  ) : (
-                    <Download className="mr-2" size={16} />
-                  )}
-                  {isDownloading ? 'Downloading...' : 'Download Report'}
-                </button>
+
+                {/* Send Reminder Button */}
                 <button
                   onClick={handleSendReminder}
-                  disabled={isSendingReminder}
-                  className={`w-full bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center justify-center
-                    ${isSendingReminder ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'}`}
+                  disabled={isSubmitting || status.text !== 'Ongoing'}
+                  className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center justify-center hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {isSendingReminder ? (
-                    <Loader className="mr-2 animate-spin" size={16} />
-                  ) : (
-                    <Mail className="mr-2" size={16} />
-                  )}
-                  {isSendingReminder ? 'Sending...' : 'Send Reminder'}
+                  {isSubmitting ? <Loader className="mr-2 animate-spin" size={16} /> : <Mail className="mr-2" size={16} />}
+                  {isSubmitting ? 'Processing...' : 'Send Reminder'}
                 </button>
-                <button className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                  <Trash2 className="mr-2" size={16} />
-                  Cancel Election
+
+                {/* Cancel Election Button */}
+                <button
+                  onClick={handleCancelElection}
+                  disabled={isSubmitting || status.text === 'Completed' || status.text === 'Cancelled'}
+                  className="w-full bg-red-600 text-white px-4 py-2 rounded-lg flex items-center justify-center hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? <Loader className="mr-2 animate-spin" size={16} /> : <Trash2 className="mr-2" size={16} />}
+                  {isSubmitting ? 'Processing...' : 'Cancel Election'}
                 </button>
               </div>
             </div>

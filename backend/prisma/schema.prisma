@@ -21,7 +21,6 @@ model User {
   updatedAt    DateTime @updatedAt
 
   elections     Election[]
-  votes         Vote[]
   auditLogs     AuditLog[]
   refreshTokens RefreshToken[]
 }
@@ -38,50 +37,63 @@ model RefreshToken {
 
   @@index([userId])
 }
-
 model Election {
-  id          String     @id @default(cuid())
+  id          String       @id @default(cuid())
   Matter      String?
   title       String
-  description String?
   startTime   DateTime
   endTime     DateTime
-  isPublished Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  status      VoteStatus @default(SCHEDULED)
-
-  // NEW FIELDS BELOW 👇
+  isPublished Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  status      VoteStatus   @default(SCHEDULED)
   createdById String
-  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
-  candidates Candidate[]
-  votes      Vote[]
+  candidates  Candidate[]
+  resolutions Resolution[]
+}
+
+model Resolution {
+  id              String  @id @default(cuid())
+  title           String
+  description     String?
+  
+  agreeLabel      String  @default("Agree")
+  disagreeLabel   String  @default("Disagree")
+  abstainLabel    String  @default("Abstain from voting")
+  
+  electionId      String
+  election        Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  
+  votes           Vote[] // <-- This links a resolution to its votes
 }
 
 model Candidate {
   id          String   @id @default(cuid())
   name        String
   email       String?
-  description String?
-  electionId  String
   share       Float    @default(0.0)
-  election    Election @relation(fields: [electionId], references: [id])
-
-  votes Vote[]
-}
-
-model Vote {
-  id          String   @id @default(cuid())
-  userId      String
+  
   electionId  String
-  candidateId String
-  createdAt   DateTime @default(now())
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
 
-  user      User      @relation(fields: [userId], references: [id])
-  election  Election  @relation(fields: [electionId], references: [id])
-  candidate Candidate @relation(fields: [candidateId], references: [id])
+  votes       Vote[] // <-- This links a candidate to their votes
+}
+model Vote {
+  id           String     @id @default(cuid())
+  choice       VoteChoice // Stores the actual vote (e.g., ACCEPT)
+  createdAt    DateTime   @default(now())
 
-  @@unique([userId, electionId])
+  // Relation to the candidate who voted
+  candidateId  String
+  candidate    Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  // Relation to the specific resolution being voted on
+  resolutionId String
+  resolution   Resolution @relation(fields: [resolutionId], references: [id], onDelete: Cascade)
+
+  // This ensures a candidate can only vote ONCE per resolution.
+  @@unique([candidateId, resolutionId])
 }
 
 model AuditLog {
@@ -113,4 +125,9 @@ enum VoteStatus {
   ONGOING
   COMPLETED
   CANCELLED
+}
+enum VoteChoice {
+  ACCEPT
+  REJECT
+  ABSTAIN
 }

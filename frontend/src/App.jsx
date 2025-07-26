@@ -13,17 +13,25 @@ import Profile from './pages/Profile';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/DashboardLayout';
 import ElectionDetails from './pages/Election_details';
+import VotingPage from './pages/VotingPage';
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
+        {/* --- PUBLIC ROUTES --- */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        
+        {/* The Magic Link route for voting (public but secure) */}
+        <Route path="/elections/vote/:token" element={<VotingPage />} />
 
+        {/* This route is for logged-in users to see details, but is also public */}
+        <Route path="/election/:id" element={<ElectionDetails />} />
+
+        {/* --- PRIVATE ROUTES (for logged-in users only) --- */}
         <Route element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vote-status" element={<VoteStatus />} />
@@ -31,11 +39,10 @@ function App() {
           <Route path="/reschedule-voting" element={<RescheduleVoting />} />
           <Route path="/cancel-voting" element={<CancelVoting />} />
           <Route path="/profile" element={<Profile />} />
-          
         </Route>
-        <Route path="/election/:id" element={<ElectionDetails />} />
 
-        {/* Catch-all */}
+        {/* --- CATCH-ALL ROUTE (MUST BE LAST) --- */}
+        {/* If no other route matches, this one will be used. */}
         <Route path="*" element={<Home />} />
       </Routes>
     </Router>
