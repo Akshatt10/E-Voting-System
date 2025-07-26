@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo  } from "react";
 import { useNavigate } from "react-router-dom";
 import { XCircle, AlertCircle, CheckCircle, Trash2 } from "lucide-react";
 
@@ -28,6 +28,14 @@ const CancelVoting = () => {
     fetchElections();
   }, []);
 
+  const cancellableElections = useMemo(() => {
+    const now = new Date();
+    return elections.filter(el => {
+      const endTime = new Date(el.endTime);
+      return endTime > now && el.status !== 'CANCELLED';
+    });
+  }, [elections]);
+
   const handleCancel = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -55,9 +63,10 @@ const CancelVoting = () => {
       const data = await res.json();
       if (res.ok) {
         setSuccess("Election cancelled successfully!");
-        setSelectedId(""); 
+        setSelectedId("");
+        // Update the main list to reflect the change immediately
         setElections(elections.filter(el => el.id !== selectedId));
-        setTimeout(() => navigate("/vote-status"), 2000); 
+        setTimeout(() => navigate("/vote-status"), 2000);
       } else {
         setError(data.message || "Failed to cancel election.");
       }
@@ -107,38 +116,27 @@ const CancelVoting = () => {
               <option value="" disabled>
                 -- Select an election --
               </option>
-              {elections.length > 0 ? (
-                elections.map((el) => (
+              {/* --- MODIFIED: Use the filtered list here --- */}
+              {cancellableElections.length > 0 ? (
+                cancellableElections.map((el) => (
                   <option key={el.id} value={el.id}>
                     {el.title} (
                     {new Date(el.startTime).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    -{" "}
-                    {new Date(el.endTime).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
+                      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                    })} - {new Date(el.endTime).toLocaleString("en-US", {
+                      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
                     })}
                     )
                   </option>
                 ))
               ) : (
                 <option value="" disabled>
-                  No active elections available
+                  No ongoing or scheduled elections available
                 </option>
               )}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 6.757 7.586 5.343 9z" />
-              </svg>
+              {/* ... svg icon ... */}
             </div>
           </div>
         </div>
@@ -161,7 +159,7 @@ const CancelVoting = () => {
           )}
         </button>
       </form>
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }

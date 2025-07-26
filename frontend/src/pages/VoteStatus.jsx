@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit,
-  Play, CalendarClock // <-- Added missing icons
+  Play, CalendarClock, BarChart2  // <-- Added missing icons
 } from "lucide-react";
 
 // Import the ElectionDetails component
@@ -21,22 +21,73 @@ const VoteStatus = () => {
   const [selectedElectionId, setSelectedElectionId] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
 
+  // const fetchElections = useCallback(async () => {
+  //   setLoading(true);
+  //   setError("");
+
+  //   const accessToken = localStorage.getItem("accessToken");
+  //   if (!accessToken) {
+  //     setError("You are not logged in. Please log in to view election status.");
+  //     setLoading(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const res = await fetch("/api/elections/user-elections", {
+  //       headers: {
+  //         Authorization: "Bearer " + accessToken,
+  //       },
+  //     });
+  //     if (!res.ok) {
+  //       const errorData = await res.json();
+  //       throw new Error(errorData.message || "Failed to fetch elections");
+  //     }
+  //     const data = await res.json();
+  //     setElections(data.elections || []);
+  //   } catch (err) {
+  //     console.error("Error fetching elections:", err);
+  //     setError(err.message || "Could not load elections.");
+  //     setElections([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
+
+  // const fetchCandidates = async (electionId) => {
+  //   try {
+  //     const accessToken = localStorage.getItem("accessToken");
+  //     const res = await fetch(`http://localhost:3000/api/elections/candidates/${electionId}`, {
+  //       headers: {
+  //         Authorization: "Bearer " + accessToken,
+  //       },
+  //     });
+  //     if (!res.ok) {
+  //       throw new Error("Failed to fetch candidates.");
+  //     }
+  //     const data = await res.json();
+  //     setCandidatesMap(prev => ({
+  //       ...prev,
+  //       [electionId]: data.candidates.map(c => ({ ...c, selected: false }))
+  //     }));
+  //   } catch (error) {
+  //     console.error("Candidate fetch error:", error);
+  //     setCandidatesMap(prev => ({ ...prev, [electionId]: [] }));
+  //   }
+  // };
+
+
   const fetchElections = useCallback(async () => {
     setLoading(true);
     setError("");
-
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
       setError("You are not logged in. Please log in to view election status.");
       setLoading(false);
       return;
     }
-
     try {
       const res = await fetch("/api/elections/user-elections", {
-        headers: {
-          Authorization: "Bearer " + accessToken,
-        },
+        headers: { Authorization: "Bearer " + accessToken },
       });
       if (!res.ok) {
         const errorData = await res.json();
@@ -45,7 +96,6 @@ const VoteStatus = () => {
       const data = await res.json();
       setElections(data.elections || []);
     } catch (err) {
-      console.error("Error fetching elections:", err);
       setError(err.message || "Could not load elections.");
       setElections([]);
     } finally {
@@ -56,14 +106,11 @@ const VoteStatus = () => {
   const fetchCandidates = async (electionId) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const res = await fetch(`http://localhost:3000/api/elections/candidates/${electionId}`, {
-        headers: {
-          Authorization: "Bearer " + accessToken,
-        },
+      const res = await fetch(`/api/elections/candidates/${electionId}`, {
+        headers: { Authorization: "Bearer " + accessToken },
       });
-      if (!res.ok) {
-        throw new Error("Failed to fetch candidates.");
-      }
+      if (!res.ok) throw new Error("Failed to fetch candidates.");
+      
       const data = await res.json();
       setCandidatesMap(prev => ({
         ...prev,
@@ -261,13 +308,12 @@ const VoteStatus = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date & Time</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date & Time</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Edit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">View</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {elections.map((item, index) => {
-                    const { text: statusText, bgColor, textColor } = getElectionStatus(item.startTime, item.endTime, item.status);
+                    const status = getElectionStatus(item.startTime, item.endTime, item.status);
                     return (
                       <React.Fragment key={item.id}>
                         <tr className="hover:bg-gray-50">
@@ -290,99 +336,56 @@ const VoteStatus = () => {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.startTime)}</td>
                           <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.endTime)}</td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bgColor} ${textColor}`}>
-                              {statusText}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            <button className="text-blue-600 hover:text-blue-800">
-                              <Edit size={16} />
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            <button 
-                              onClick={() => handleViewElection(item.id)}
-                              className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 flex items-center"
-                            >
-                              <Eye className="mr-1" size={12} />
-                              View
-                            </button>
+                          <td className="px-6 py-4"><span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status.bgColor} ${status.textColor}`}>{status.text}</span></td>
+                          <td className="px-6 py-4 text-sm flex items-center gap-2">
+                             <button onClick={() => handleViewElection(item.id)} className="text-blue-600 hover:text-blue-800"><Eye size={16} /></button>
+                             <button className="text-gray-500 hover:text-gray-700"><Edit size={16} /></button>
                           </td>
                         </tr>
 
                         {expandedRow === item.id && (
                           <tr className="bg-gray-50 border-t">
                             <td colSpan="9" className="p-4">
-                              {candidatesMap[item.id]?.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                  <table className="min-w-full text-sm border rounded-md">
-                                    <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
-                                      <tr>
-                                        <th className="px-4 py-2 border">
-                                          <input
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                              const checked = e.target.checked;
-                                              setCandidatesMap(prev => ({
-                                                ...prev,
-                                                [item.id]: prev[item.id].map(c => ({ ...c, selected: checked }))
-                                              }));
-                                            }}
-                                          />
-                                          <span className="ml-2">Check All</span>
-                                        </th>
-                                        <th className="px-4 py-2 border">Sr No</th>
-                                        <th className="px-4 py-2 border">Name</th>
-                                        <th className="px-4 py-2 border">Email</th>
-                                        <th className="px-4 py-2 border">Share</th>
-                                        <th className="px-4 py-2 border">Actions</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {candidatesMap[item.id].map((cand, idx) => (
-                                        <tr key={cand.id} className="bg-white border-t">
-                                          <td className="px-4 py-2 border text-center">
-                                            <input
-                                              type="checkbox"
-                                              checked={cand.selected || false}
-                                              onChange={(e) => {
-                                                const updated = [...candidatesMap[item.id]];
-                                                updated[idx].selected = e.target.checked;
-                                                setCandidatesMap(prev => ({
-                                                  ...prev,
-                                                  [item.id]: updated
-                                                }));
-                                              }}
-                                            />
-                                          </td>
-                                          <td className="px-4 py-2 border">{idx + 1}</td>
-                                          <td className="px-4 py-2 border">{cand.name}</td>
-                                          <td className="px-4 py-2 border">{cand.email}</td>
-                                          <td className="px-4 py-2 border">{cand.share}</td>
-                                          <td className="px-4 py-2 border">
-                                            <button
-                                              onClick={() => handleResendEmail(item.id, cand.email, cand.name)}
-                                              className="bg-blue-400 hover:bg-blue-500 text-black font-semibold py-1 px-3 rounded text-xs flex items-center justify-center"
-                                              disabled={resendingEmail === cand.email}
-                                            >
-                                              {resendingEmail === cand.email ? (
-                                                <>
-                                                  <Loader className="animate-spin mr-2" size={14} />
-                                                  Sending...
-                                                </>
-                                              ) : (
-                                                "Resend Email"
-                                              )}
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
+                              {candidatesMap[item.id] ? (
+                                candidatesMap[item.id].length > 0 ? (
+                                  <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm border rounded-md">
+                                        {/* This is the full table from your original code */}
+                                        <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
+                                            <tr>
+                                                <th className="px-4 py-2 border">Sr No</th>
+                                                <th className="px-4 py-2 border">Name</th>
+                                                <th className="px-4 py-2 border">Email</th>
+                                                <th className="px-4 py-2 border">Share</th>
+                                                <th className="px-4 py-2 border">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {candidatesMap[item.id].map((cand, idx) => (
+                                                <tr key={cand.id} className="bg-white border-t">
+                                                    <td className="px-4 py-2 border">{idx + 1}</td>
+                                                    <td className="px-4 py-2 border">{cand.name}</td>
+                                                    <td className="px-4 py-2 border">{cand.email}</td>
+                                                    <td className="px-4 py-2 border">{cand.share}%</td>
+                                                    <td className="px-4 py-2 border">
+                                                        <button
+                                                            onClick={() => handleResendEmail(item.id, cand.email)}
+                                                            className="bg-blue-400 hover:bg-blue-500 text-black font-semibold py-1 px-3 rounded text-xs"
+                                                            disabled={resendingEmail === cand.email}
+                                                        >
+                                                            {resendingEmail === cand.email ? 'Sending...' : 'Resend Email'}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                  </div>
+                                ) : (
+                                  <div className="text-gray-600">No candidates found for this election.</div>
+                                )
                               ) : (
-                                <div className="text-gray-600">No candidates found.</div>
+                                <div className="flex justify-center items-center"><Loader className="animate-spin text-indigo-600" /></div>
                               )}
                             </td>
                           </tr>
