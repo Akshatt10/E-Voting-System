@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Clock, CheckCircle, XCircle, Loader, Calendar, Info, AlertCircle, Eye, Edit,
-  Play, CalendarClock, BarChart2  // <-- Added missing icons
+  Play, CalendarClock, BarChart2
 } from "lucide-react";
 
 // Import the ElectionDetails component
@@ -16,65 +17,12 @@ const VoteStatus = () => {
   const [resendingEmail, setResendingEmail] = useState(null);
   const [emailResendStatus, setEmailResendStatus] = useState({ success: false, message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
-  
+
   // New state for handling details view
   const [selectedElectionId, setSelectedElectionId] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  // const fetchElections = useCallback(async () => {
-  //   setLoading(true);
-  //   setError("");
-
-  //   const accessToken = localStorage.getItem("accessToken");
-  //   if (!accessToken) {
-  //     setError("You are not logged in. Please log in to view election status.");
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   try {
-  //     const res = await fetch("/api/elections/user-elections", {
-  //       headers: {
-  //         Authorization: "Bearer " + accessToken,
-  //       },
-  //     });
-  //     if (!res.ok) {
-  //       const errorData = await res.json();
-  //       throw new Error(errorData.message || "Failed to fetch elections");
-  //     }
-  //     const data = await res.json();
-  //     setElections(data.elections || []);
-  //   } catch (err) {
-  //     console.error("Error fetching elections:", err);
-  //     setError(err.message || "Could not load elections.");
-  //     setElections([]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, []);
-
-  // const fetchCandidates = async (electionId) => {
-  //   try {
-  //     const accessToken = localStorage.getItem("accessToken");
-  //     const res = await fetch(`http://localhost:3000/api/elections/candidates/${electionId}`, {
-  //       headers: {
-  //         Authorization: "Bearer " + accessToken,
-  //       },
-  //     });
-  //     if (!res.ok) {
-  //       throw new Error("Failed to fetch candidates.");
-  //     }
-  //     const data = await res.json();
-  //     setCandidatesMap(prev => ({
-  //       ...prev,
-  //       [electionId]: data.candidates.map(c => ({ ...c, selected: false }))
-  //     }));
-  //   } catch (error) {
-  //     console.error("Candidate fetch error:", error);
-  //     setCandidatesMap(prev => ({ ...prev, [electionId]: [] }));
-  //   }
-  // };
-
+  const navigate = useNavigate();
 
   const fetchElections = useCallback(async () => {
     setLoading(true);
@@ -110,7 +58,7 @@ const VoteStatus = () => {
         headers: { Authorization: "Bearer " + accessToken },
       });
       if (!res.ok) throw new Error("Failed to fetch candidates.");
-      
+
       const data = await res.json();
       setCandidatesMap(prev => ({
         ...prev,
@@ -177,6 +125,10 @@ const VoteStatus = () => {
     setSelectedElectionId(null);
   };
 
+  const handleViewResults = (electionId) => {
+    navigate(`/election/${electionId}/results`);
+  };
+
   useEffect(() => {
     fetchElections();
     const interval = setInterval(fetchElections, 60000);
@@ -194,10 +146,10 @@ const VoteStatus = () => {
     const end = new Date(endTime);
 
     if (currentStatus === "CANCELLED") {
-      return { 
-        text: "Cancelled", 
-        color: "red", 
-        bgColor: "bg-red-100", 
+      return {
+        text: "Cancelled",
+        color: "red",
+        bgColor: "bg-red-100",
         textColor: "text-red-800",
         icon: XCircle,
         pulseClass: ""
@@ -205,38 +157,38 @@ const VoteStatus = () => {
     }
 
     if (now < start) {
-      return { 
-        text: "Scheduled", 
-        color: "blue", 
-        bgColor: "bg-blue-100", 
+      return {
+        text: "Scheduled",
+        color: "blue",
+        bgColor: "bg-blue-100",
         textColor: "text-blue-800",
         icon: CalendarClock,
         pulseClass: ""
       };
     } else if (now >= start && now <= end) {
-      return { 
-        text: "Ongoing", 
-        color: "orange", 
-        bgColor: "bg-orange-100", 
+      return {
+        text: "Ongoing",
+        color: "orange",
+        bgColor: "bg-orange-100",
         textColor: "text-orange-800",
         icon: Play,
         pulseClass: "animate-pulse"
       };
     } else if (now > end) {
-      return { 
-        text: "Completed", 
-        color: "green", 
-        bgColor: "bg-green-100", 
+      return {
+        text: "Completed",
+        color: "green",
+        bgColor: "bg-green-100",
         textColor: "text-green-800",
         icon: CheckCircle,
         pulseClass: ""
       };
     }
 
-    return { 
-      text: "Unknown", 
-      color: "gray", 
-      bgColor: "bg-gray-100", 
+    return {
+      text: "Unknown",
+      color: "gray",
+      bgColor: "bg-gray-100",
       textColor: "text-gray-800",
       icon: Info,
       pulseClass: ""
@@ -259,8 +211,8 @@ const VoteStatus = () => {
   // If showing details, render the ElectionDetails component
   if (showDetails && selectedElectionId) {
     return (
-      <ElectionDetails 
-        electionId={selectedElectionId} 
+      <ElectionDetails
+        electionId={selectedElectionId}
         onBack={handleBackFromDetails}
       />
     );
@@ -336,7 +288,22 @@ const VoteStatus = () => {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.startTime)}</td>
                           <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.endTime)}</td>
-                          <td className="px-6 py-4"><span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status.bgColor} ${status.textColor}`}>{status.text}</span></td>
+                          <td className="px-6 py-4">
+                            {status.text === "Completed" ? (
+                              <button
+                                onClick={() => handleViewResults(item.id)}
+                                className="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1"
+                              >
+                                <BarChart2 size={12} />
+                                View Results
+                              </button>
+                            ) : (
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status.bgColor} ${status.textColor}`}>
+                                {status.text}
+                              </span>
+                            )}
+                          </td>
+                          
                           <td className="px-6 py-4 text-sm flex items-center gap-2">
                              <button onClick={() => handleViewElection(item.id)} className="text-blue-600 hover:text-blue-800"><Eye size={16} /></button>
                              <button className="text-gray-500 hover:text-gray-700"><Edit size={16} /></button>
@@ -350,35 +317,35 @@ const VoteStatus = () => {
                                 candidatesMap[item.id].length > 0 ? (
                                   <div className="overflow-x-auto">
                                     <table className="min-w-full text-sm border rounded-md">
-                                        {/* This is the full table from your original code */}
-                                        <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
-                                            <tr>
-                                                <th className="px-4 py-2 border">Sr No</th>
-                                                <th className="px-4 py-2 border">Name</th>
-                                                <th className="px-4 py-2 border">Email</th>
-                                                <th className="px-4 py-2 border">Share</th>
-                                                <th className="px-4 py-2 border">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {candidatesMap[item.id].map((cand, idx) => (
-                                                <tr key={cand.id} className="bg-white border-t">
-                                                    <td className="px-4 py-2 border">{idx + 1}</td>
-                                                    <td className="px-4 py-2 border">{cand.name}</td>
-                                                    <td className="px-4 py-2 border">{cand.email}</td>
-                                                    <td className="px-4 py-2 border">{cand.share}%</td>
-                                                    <td className="px-4 py-2 border">
-                                                        <button
-                                                            onClick={() => handleResendEmail(item.id, cand.email)}
-                                                            className="bg-blue-400 hover:bg-blue-500 text-black font-semibold py-1 px-3 rounded text-xs"
-                                                            disabled={resendingEmail === cand.email}
-                                                        >
-                                                            {resendingEmail === cand.email ? 'Sending...' : 'Resend Email'}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
+                                      {/* This is the full table from your original code */}
+                                      <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
+                                        <tr>
+                                          <th className="px-4 py-2 border">Sr No</th>
+                                          <th className="px-4 py-2 border">Name</th>
+                                          <th className="px-4 py-2 border">Email</th>
+                                          <th className="px-4 py-2 border">Share</th>
+                                          <th className="px-4 py-2 border">Actions</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {candidatesMap[item.id].map((cand, idx) => (
+                                          <tr key={cand.id} className="bg-white border-t">
+                                            <td className="px-4 py-2 border">{idx + 1}</td>
+                                            <td className="px-4 py-2 border">{cand.name}</td>
+                                            <td className="px-4 py-2 border">{cand.email}</td>
+                                            <td className="px-4 py-2 border">{cand.share}%</td>
+                                            <td className="px-4 py-2 border">
+                                              <button
+                                                onClick={() => handleResendEmail(item.id, cand.email)}
+                                                className="bg-blue-400 hover:bg-blue-500 text-black font-semibold py-1 px-3 rounded text-xs"
+                                                disabled={resendingEmail === cand.email}
+                                              >
+                                                {resendingEmail === cand.email ? 'Sending...' : 'Resend Email'}
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
                                     </table>
                                   </div>
                                 ) : (

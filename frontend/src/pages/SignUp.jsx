@@ -110,10 +110,10 @@ const handleSubmit = async (e) => {
           )}
 
           <div className="space-y-5">
-            {/* IBBI Number Field */}
+            {/* Registration number Field */}
             <div className="group">
               <label className="block text-sm font-medium text-white/80 mb-2">
-                IBBI Number
+                Registration number
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -124,7 +124,7 @@ const handleSubmit = async (e) => {
                   name="IBBI"
                   value={formData.IBBI}
                   onChange={handleChange}
-                  placeholder="Enter your IBBI number"
+                  placeholder="Enter your Registration number"
                   required
                   className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-200"
                 />

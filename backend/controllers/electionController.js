@@ -256,7 +256,6 @@ const resendCandidateEmail = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Candidate email not found for this election.' });
     }
 
-    // --- MODIFIED: Removed 'description' from email payload ---
     await sendCandidateNotification(candidateEmail, {
       Matter: election.Matter,
       id: election.id,
@@ -439,6 +438,109 @@ const sendAllReminders = async (req, res) => {
     }
 };
 
+const getElectionResults = async (req, res) => {
+    try {
+        const { electionId } = req.params;
+        const userId = req.user.id; // From the authenticateToken middleware
+
+        // Step 1: Fetch the election and verify ownership and completion status
+        const election = await prisma.election.findUnique({
+            where: { id: electionId },
+            include: {
+                resolutions: true,
+                candidates: true,
+            },
+        });
+
+        // Security Check 1: Ensure the election exists
+        if (!election) {
+            return res.status(404).json({ success: false, message: 'Election not found.' });
+        }
+
+        // Security Check 2: Ensure the user requesting the results is the one who created the election
+        if (election.createdById !== userId) {
+            return res.status(403).json({ success: false, message: 'You are not authorized to view these results.' });
+        }
+        
+        // Security Check 3: Ensure the election is actually completed
+        if (new Date() < new Date(election.endTime)) {
+            return res.status(403).json({ success: false, message: 'Cannot view results for an election that has not yet ended.' });
+        }
+
+        // Step 2: Fetch all votes for all resolutions in this election
+        const allVotes = await prisma.vote.findMany({
+            where: {
+                resolution: {
+                    electionId: electionId,
+                },
+            },
+            include: {
+                candidate: true, // Include the candidate details with each vote
+            },
+        });
+
+        // Step 3: Process the data into a structured report
+        const results = election.resolutions.map(resolution => {
+            // Find all votes specifically for this resolution
+            const resolutionVotes = allVotes.filter(vote => vote.resolutionId === resolution.id);
+            
+            const voterIds = new Set(resolutionVotes.map(v => v.candidateId));
+            
+            // Find candidates who did NOT vote on this resolution
+            const nonVoters = election.candidates.filter(c => !voterIds.has(c.id));
+
+            // Calculate the total share for each choice
+            const totals = resolutionVotes.reduce((acc, vote) => {
+                const share = vote.candidate.share;
+                if (vote.choice === 'ACCEPT') acc.accept += share;
+                if (vote.choice === 'REJECT') acc.reject += share;
+                if (vote.choice === 'ABSTAIN') acc.abstain += share;
+                return acc;
+            }, { accept: 0, reject: 0, abstain: 0 });
+
+            // Calculate the total share of non-voters
+            totals.notVoted = nonVoters.reduce((sum, c) => sum + c.share, 0);
+
+            return {
+                resolutionId: resolution.id,
+                title: resolution.title,
+                description: resolution.description,
+                // Map votes to a clean format for the frontend table
+                votes: resolutionVotes.map(v => ({
+                    candidateName: v.candidate.name,
+                    share: v.candidate.share,
+                    choice: v.choice,
+                    votedAt: v.createdAt,
+                })),
+                nonVoters: nonVoters.map(c => ({
+                    candidateName: c.name,
+                    share: c.share,
+                })),
+                totals: {
+                    accept: parseFloat(totals.accept.toFixed(2)),
+                    reject: parseFloat(totals.reject.toFixed(2)),
+                    abstain: parseFloat(totals.abstain.toFixed(2)),
+                    notVoted: parseFloat(totals.notVoted.toFixed(2)),
+                },
+            };
+        });
+
+        // Step 4: Send the final, processed report
+        res.status(200).json({
+            success: true,
+            results: {
+                electionTitle: election.title,
+                electionMatter: election.Matter,
+                resolutions: results,
+            },
+        });
+
+    } catch (error) {
+        console.error("Get Election Results Error:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch election results." });
+    }
+};
+
 
 
 module.exports = {
@@ -452,5 +554,6 @@ module.exports = {
   resendCandidateEmail,
   getVoteDetails,
   submitVote,
-  sendAllReminders
+  sendAllReminders,
+  getElectionResults
 };
