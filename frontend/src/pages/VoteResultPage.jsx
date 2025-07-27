@@ -308,7 +308,7 @@ const VoteResultPage = () => {
                                                             <td className="p-3 text-center text-green-600">{vote.choice === 'ACCEPT' ? vote.share.toFixed(2) : '0.00'}</td>
                                                             <td className="p-3 text-center text-red-600">{vote.choice === 'REJECT' ? vote.share.toFixed(2) : '0.00'}</td>
                                                             <td className="p-3 text-center text-gray-600">{vote.choice === 'ABSTAIN' ? vote.share.toFixed(2) : '0.00'}</td>
-
+                                                            <td className="p-3 text-center text-orange-600">{vote.choice === 'NOT_VOTED' ? vote.share.toFixed(2) : '0.00'}</td>
                                                             <td className="p-3 text-gray-500">{formatDateTime(vote.votedAt)}</td>
                                                         </tr>
                                                     ))}
