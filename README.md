@@ -16,7 +16,7 @@
    docker-compose up --build
 3. **Install Dependencies**
    ```bash
-   npm install       # or pip install -r requirements.txt
+   npm install     
 
 4. **Setup DB with prisma**
    ```bash
