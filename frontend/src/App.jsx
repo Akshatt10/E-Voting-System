@@ -14,6 +14,7 @@ import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/DashboardLayout';
 import ElectionDetails from './pages/Election_details';
 import VotingPage from './pages/VotingPage';
+import VoteResultPage from './pages/VoteResultPage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/reschedule-voting" element={<RescheduleVoting />} />
           <Route path="/cancel-voting" element={<CancelVoting />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/election/:electionId/results" element={<VoteResultPage />} />
         </Route>
 
         {/* --- CATCH-ALL ROUTE (MUST BE LAST) --- */}

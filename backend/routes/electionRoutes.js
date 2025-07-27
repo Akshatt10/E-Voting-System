@@ -11,7 +11,8 @@ const {
   getUserElections,
   getVoteDetails,
   submitVote,
-  sendAllReminders
+  sendAllReminders,
+  getElectionResults
 } = require('../controllers/electionController');
 
 const { authenticateToken } = require('../middleware/auth');
@@ -30,6 +31,7 @@ router.get('/user-elections', authenticateToken, getUserElections);
 router.get('/candidates/:electionId', getCandidatesByElectionId);
 router.post('/:electionId/reminders', authenticateToken, sendAllReminders);
 router.post('/resend-email/:electionId', authenticateToken, resendCandidateEmail);
+router.get('/:electionId/results', authenticateToken, getElectionResults);
 
 // ✅ Put general routes AFTER specific routes
 router.get('/', authenticateToken, getAllElections);

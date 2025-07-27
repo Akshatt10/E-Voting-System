@@ -162,7 +162,7 @@
 //               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
 //                 <div><strong className="font-medium text-gray-600">Name:</strong> {user ? `${user.firstname} ${user.lastname}` : '...'}</div>
 //                 <div><strong className="font-medium text-gray-600">Email:</strong> {user.email}</div>
-//                 <div><strong className="font-medium text-gray-600">IBBI No:</strong> {user.IBBI}</div>
+//                 <div><strong className="font-medium text-gray-600">Reg. No.:</strong> {user.IBBI}</div>
 //               </div>
 //             </section>
 
@@ -499,7 +499,7 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
                 <div><strong className="font-medium text-gray-600">Name:</strong> {user ? `${user.firstname} ${user.lastname}` : '...'}</div>
                 <div><strong className="font-medium text-gray-600">Email:</strong> {user?.email || '...'}</div>
-                <div><strong className="font-medium text-gray-600">IBBI No:</strong> {user?.IBBI || '...'}</div>
+                <div><strong className="font-medium text-gray-600">Reg. No.:</strong> {user?.IBBI || '...'}</div>
               </div>
             </section>
 

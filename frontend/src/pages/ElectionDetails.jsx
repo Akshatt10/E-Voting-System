@@ -97,9 +97,7 @@ const ElectionDetails = ({ electionId, onBack }) => {
     setIsSubmitting(true);
     const accessToken = localStorage.getItem("accessToken");
     try {
-      // NOTE: This assumes you have a backend endpoint to send reminders to all non-voters.
-      // We are using the existing 'resend-email' for simplicity, which may need to be adapted
-      // in your backend to handle bulk reminders if desired.
+    
       const response = await fetch(`/api/elections/${electionId}/reminders`, {
         method: 'POST',
         headers: { 'Authorization': "Bearer " + accessToken },
@@ -115,7 +113,6 @@ const ElectionDetails = ({ electionId, onBack }) => {
     }
   };
 
-  // --- NEW: Handler for canceling the election ---
   const handleCancelElection = async () => {
     if (!window.confirm("Are you sure you want to cancel this election? This action cannot be undone.")) {
       return;
