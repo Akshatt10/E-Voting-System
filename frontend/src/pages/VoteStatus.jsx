@@ -304,9 +304,9 @@ const VoteStatus = () => {
                             )}
                           </td>
                           
-                          <td className="px-6 py-4 text-sm flex items-center gap-2">
+                          <td className="px-10 py-4 text-sm flex items-center gap-2">
                              <button onClick={() => handleViewElection(item.id)} className="text-blue-600 hover:text-blue-800"><Eye size={16} /></button>
-                             <button className="text-gray-500 hover:text-gray-700"><Edit size={16} /></button>
+                             
                           </td>
                         </tr>
 
