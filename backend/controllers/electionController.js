@@ -244,25 +244,29 @@ const resendCandidateEmail = async (req, res) => {
 
     const election = await prisma.election.findUnique({
       where: { id: electionId },
-      include: { candidates: true },
+      include: { candidates: true }, // We need the full candidate list
     });
 
     if (!election) {
       return res.status(404).json({ success: false, message: 'Election not found.' });
     }
 
-    const candidateExists = election.candidates.some(c => c.email === candidateEmail);
-    if (!candidateExists) {
+    // --- THIS IS THE KEY FIX ---
+    // Find the full candidate object that matches the email
+    const candidate = election.candidates.find(c => c.email === candidateEmail);
+
+    if (!candidate) {
       return res.status(404).json({ success: false, message: 'Candidate email not found for this election.' });
     }
 
-    await sendCandidateNotification(candidateEmail, {
-      Matter: election.Matter,
+    // Now, call the email function with the FULL candidate object
+    // Using sendVotingReminder is more appropriate here
+    await sendVotingReminder(candidate, {
       id: election.id,
       title: election.title,
-      startTime: election.startTime,
       endTime: election.endTime,
     });
+    // --- END OF FIX ---
 
     res.status(200).json({ success: true, message: `Notification email successfully resent to ${candidateEmail}.` });
 
@@ -271,7 +275,6 @@ const resendCandidateEmail = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to resend email.', error: error.message });
   }
 };
-
 
 const getVoteDetails = async (req, res) => {
     const { token } = req.params;

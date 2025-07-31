@@ -12,7 +12,7 @@ import CancelVoting from './pages/CancelVoting';
 import Profile from './pages/Profile';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/DashboardLayout';
-import ElectionDetails from './pages/Election_details';
+import ElectionDetails from './pages/ElectionDetails';
 import VotingPage from './pages/VotingPage';
 import VoteResultPage from './pages/VoteResultPage';
 
