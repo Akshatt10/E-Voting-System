@@ -1,9 +1,8 @@
     const cron = require('node-cron');
     const { sendDailyReminders } = require('../utils/reminders');
 
-    // This function sets up and starts the scheduled job
     const initScheduledJobs = () => {
-        // This cron expression means "every 5 seconds"
+
         const scheduledJob = cron.schedule('* *9 * * *', () => {
             console.log('---------------------');
             console.log('Running scheduled reminder task...');
@@ -11,7 +10,7 @@
             console.log('---------------------');
         }, {
             scheduled: true,
-            timezone: "Asia/Kolkata" // Important: Set your timezone
+            timezone: "Asia/Kolkata"
         });
 
         scheduledJob.start();
