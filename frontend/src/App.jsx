@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Signup from './pages/SignUp';
 import Home from './pages/Home';
 import About from './pages/About';
+import Contact from './pages/contact';
 import Dashboard from './pages/Dashboard';
 import VoteStatus from './pages/VoteStatus';
 import CreateVoting from './pages/CreateVoting';
@@ -26,6 +27,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/contact" element={<Contact/>}/>
         
         {/* The Magic Link route for voting (public but secure) */}
         <Route path="/elections/vote/:token" element={<VotingPage />} />
