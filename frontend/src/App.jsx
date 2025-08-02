@@ -15,6 +15,7 @@ import DashboardLayout from './components/DashboardLayout';
 import ElectionDetails from './pages/ElectionDetails';
 import VotingPage from './pages/VotingPage';
 import VoteResultPage from './pages/VoteResultPage';
+import PaymentHistory from './pages/PaymentHistory';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
           <Route path="/cancel-voting" element={<CancelVoting />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/election/:electionId/results" element={<VoteResultPage />} />
+          <Route path="/payment-history" element={<PaymentHistory />} />
         </Route>
 
         {/* --- CATCH-ALL ROUTE (MUST BE LAST) --- */}
