@@ -68,6 +68,13 @@ const DashboardLayout = () => {
       label: 'Status of Voting',
       color: 'from-blue-500 to-blue-600',
       hoverColor: 'hover:from-blue-600 hover:to-blue-700'
+    },
+    {
+      to: '/payment-history',
+      icon: FaUserCircle,
+      label: 'Payment History',
+      color: 'from-blue-500 to-blue-600',
+      hoverColor: 'hover:from-blue-600 hover:to-blue-700'
     }
   ];
 
