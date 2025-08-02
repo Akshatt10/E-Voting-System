@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth');
 const { PrismaClient } = require('@prisma/client');
+const { initScheduledJobs } = require('./jobs/reminderScheduler');
 const electionRoutes = require('./routes/electionRoutes');
 
 
@@ -21,10 +22,13 @@ app.use(morgan('dev')); // Logs
 app.use(express.json()); // Parse JSON body
 app.use(cookieParser()); // If you use cookies (optional)
 
+initScheduledJobs();
 // Health check
 app.get('/', (req, res) => {
   res.json({ success: true, message: 'API is running' });
 });
+
+app.use('/api/public', authRoutes);
 
 // Auth routes
 app.use('/api/auth', authRoutes);
