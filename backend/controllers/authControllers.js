@@ -222,8 +222,6 @@ const currentUser = (req, res) => {
   }
 };
 
-
-
 const getProfile = async (req, res) => {
   const user = req.user;
   
@@ -278,6 +276,36 @@ const updateProfile = async (req, res) => {
   }
 };
 
+
+const getPublicStats = async (req, res) => {
+    try {
+        // --- MODIFIED: Uses the 'verified' field from your User schema ---
+        const totalUsers = await prisma.user.count({
+            where: { verified: true } // Only count verified users
+        });
+
+        // This query correctly uses the 'isPublished' field from your Election schema
+        const totalElections = await prisma.election.count({
+            where: { isPublished: true } // Only count published elections
+        });
+
+        // This is a placeholder for a more advanced "online users" feature
+        const simulatedOnlineUsers = Math.floor(Math.random() * (15 - 5 + 1)) + 5;
+
+        res.status(200).json({
+            success: true,
+            stats: {
+                totalUsers,
+                totalElections,
+                onlineUsers: simulatedOnlineUsers,
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching public stats:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch platform statistics." });
+    }
+};
+
 module.exports = {
   register,
   login,
@@ -286,5 +314,6 @@ module.exports = {
   logoutAll,
   getProfile,
   currentUser,
-  updateProfile
+  updateProfile,
+  getPublicStats
 };

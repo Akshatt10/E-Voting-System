@@ -14,7 +14,8 @@ const {
   logoutAll,
   getProfile,
   currentUser,
-  updateProfile
+  updateProfile,
+  getPublicStats
 } = require('../controllers/authControllers');
 
 const router = express.Router();
@@ -41,6 +42,8 @@ const refreshLimiter = rateLimit({
 });
 
 // Public routes
+router.get('/stats', getPublicStats);
+
 router.post('/register', 
   authLimiter,
   validateRegistration,

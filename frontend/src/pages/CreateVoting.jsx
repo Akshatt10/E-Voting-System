@@ -703,46 +703,42 @@ const CreateVoting = () => {
                   </button>
                 </div>
 
-                {/* Display Total Share and Error */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
-                  <div className="font-semibold text-gray-800">
-                    Total Share:{" "}
-                    <span className={calculateTotalShare() === 100 ? "text-green-600" : "text-red-600"}>
-                      {calculateTotalShare()}%
-                    </span>
-                  </div>
-                  {totalShareError && (
-                    <p className="text-red-500 text-sm flex items-center">
-                      <AlertCircle size={16} className="mr-1" />
-                      {totalShareError}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+                /* Display Total Share and Error */
+                        <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
+                          <div className="font-semibold text-gray-800">
+                          Total Share:{" "}
+                          <span className={calculateTotalShare() === 100 ? "text-green-600" : "text-red-600"}>
+                            {calculateTotalShare()}%
+                          </span>
+                          </div>
+                          {totalShareError && (
+                          <p className="text-red-500 text-sm flex items-center">
+                            <AlertCircle size={16} className="mr-1" />
+                            {totalShareError}
+                          </p>
+                          )}
+                        </div>
+                        </div>
+                      )}
 
-            <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-              <div className="flex space-x-3">
-                {currentStep < 3 ? (
-                  <button type="button" onClick={handleNextStep} className="...">
-                    <span>Next</span>
-                    {/* ... svg icon ... */}
-                  </button>
-                ) : (
-                  // --- MODIFIED: Final button now triggers payment ---
-                  <button
-                    type="button"
-                    className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white ..."
-                    disabled={isSubmitDisabled}
-                    onClick={handleProceedToPayment}
-                  >
-                    {loading ? 'Processing...' : 'Proceed to Payment'}
-                  </button>
-                )}
-              </div>
-            </div>
+                      <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                        <div className="flex space-x-3">
+                        {/* Removed the Next button here */}
+                        {currentStep === 3 && (
+                          // --- MODIFIED: Final button now triggers payment ---
+                          <button
+                          type="button"
+                          className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white ..."
+                          disabled={isSubmitDisabled}
+                          onClick={handleProceedToPayment}
+                          >
+                          {loading ? 'Processing...' : 'Proceed to Payment'}
+                          </button>
+                        )}
+                        </div>
+                      </div>
 
-            {/* Existing completion message - adjust if needed */}
+                      {/* Existing completion message - adjust if needed */}
             {currentStep === 3 && form.candidates.filter(c => c.name.trim()).length >= 2 && calculateTotalShare() === 100 && (
               <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
                 <p className="text-green-800 text-sm">
@@ -848,7 +844,7 @@ const CreateVoting = () => {
           </div>
         </div>
       )}
-      <style jsx>{`
+      <style>{`
                @keyframes fadeIn {
                  from { opacity: 0; transform: translateY(10px); }
                  to { opacity: 1; transform: translateY(0); }
