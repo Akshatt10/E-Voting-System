@@ -1,8 +1,8 @@
 // src/layouts/DashboardLayout.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FaVoteYea, FaCalendarAlt, FaTrashAlt, FaCheckCircle, FaUserCircle, FaBars, FaTimes, FaTachometerAlt } from 'react-icons/fa';
-
+import { LogOut } from 'lucide-react'; 
 const DashboardLayout = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -10,11 +10,20 @@ const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
 
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+
+    localStorage.removeItem('accessToken');
+
+    navigate('/');
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return setError('No token found');
-      
+
       try {
         const res = await fetch('/api/auth/current-user', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -89,46 +98,46 @@ const DashboardLayout = () => {
         <aside className="w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col shadow-2xl relative overflow-hidden">
           {/* Decorative gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 pointer-events-none"></div>
-          
+
           {/* Header */}
-          <div className="relative z-10 text-center py-8 border-b border-slate-700/50">
+          <Link to="/" className="block relative z-10 text-center py-8 border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors duration-200">
             <div className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent text-3xl font-bold mb-2">
               iBC Voting
             </div>
             <div className="text-slate-400 text-sm font-medium">
               Digital Democracy Platform
             </div>
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="relative z-10 flex flex-col gap-2 px-4 py-6">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = isActiveRoute(item.to);
-              
+
               return (
                 <Link
                   key={item.to}
                   to={item.to}
                   className={`
                     group relative overflow-hidden rounded-xl transition-all duration-300 transform
-                    ${isActive 
-                      ? `bg-gradient-to-r ${item.color} shadow-lg scale-105 shadow-${item.color.split('-')[1]}-500/25` 
+                    ${isActive
+                      ? `bg-gradient-to-r ${item.color} shadow-lg scale-105 shadow-${item.color.split('-')[1]}-500/25`
                       : 'hover:scale-105 hover:shadow-lg'
                     }
                   `}
                 >
                   <div className={`
                     flex items-center gap-4 p-4 relative z-10 transition-all duration-300
-                    ${isActive 
-                      ? 'text-white' 
+                    ${isActive
+                      ? 'text-white'
                       : `text-slate-300 hover:text-white group-hover:bg-gradient-to-r group-hover:${item.color}`
                     }
                   `}>
                     <div className={`
                       flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300
-                      ${isActive 
-                        ? 'bg-white/20 shadow-inner' 
+                      ${isActive
+                        ? 'bg-white/20 shadow-inner'
                         : 'bg-slate-700/50 group-hover:bg-white/20'
                       }
                     `}>
@@ -143,7 +152,7 @@ const DashboardLayout = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Hover effect overlay */}
                   {!isActive && (
                     <div className={`
@@ -184,7 +193,7 @@ const DashboardLayout = () => {
                   )}
                 </div>
               </button>
-              
+
               <div className="flex flex-col">
                 <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   Welcome back!
@@ -203,13 +212,14 @@ const DashboardLayout = () => {
                 <FaUserCircle className="text-xl group-hover:scale-110 transition-transform" />
                 <span className="font-medium">Profile</span>
               </Link>
-              
-              <Link
-                to="/logout"
-                className="group px-4 py-2 rounded-lg bg-gradient-to-r from-red-50 to-red-100 hover:from-red-500 hover:to-red-600 text-red-600 hover:text-white font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center space-x-3 px-4 py-3 text-slate-700 hover:bg-slate-900 hover:text-white transition-colors"
               >
-                Logout
-              </Link>
+                <LogOut size={20} />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </header>

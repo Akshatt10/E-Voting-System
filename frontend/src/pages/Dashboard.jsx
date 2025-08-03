@@ -72,10 +72,10 @@
 //             Authorization: "Bearer " + accessToken,
 //           },
 //         });
-        
+
 //         console.log('Response status:', res.status); // Debug log
 //         console.log('Response ok:', res.ok); // Debug log
-        
+
 //         if (!res.ok) {
 //           let errorData = {};
 //           try {
@@ -86,7 +86,7 @@
 //           }
 //           throw new Error(errorData.message || "Failed to fetch dashboard data.");
 //         }
-        
+
 //         const data = await res.json();
 //         console.log('Elections data received:', data); // Debug log
 //         setElections(data.elections || []);
@@ -315,6 +315,7 @@ import {
     Loader, AlertCircle, Info, Play, BarChart2, ListTodo, Eye
 } from 'lucide-react';
 import ElectionDetails from '../pages/ElectionDetails'; // --- ADDED: Import details component
+import api from '../utils/interceptor';
 
 const Dashboard = () => {
     const [elections, setElections] = useState([]);
@@ -327,34 +328,62 @@ const Dashboard = () => {
     const [selectedElectionId, setSelectedElectionId] = useState(null);
     const [showDetails, setShowDetails] = useState(false);
 
+    // useEffect(() => {
+    //     const fetchData = async () => {
+    //         setLoading(true);
+    //         setError('');
+    //         const accessToken = localStorage.getItem("accessToken");
+    //         if (!accessToken) {
+    //             setError("Authentication failed. Please log in.");
+    //             setLoading(false);
+    //             return;
+    //         }
+    //         try {
+    //             // Fetch user and elections data in parallel for efficiency
+    //             const [userRes, electionsRes] = await Promise.all([
+    //                 fetch('/api/auth/current-user', { headers: { 'Authorization': `Bearer ${accessToken}` } }),
+    //                 fetch("/api/elections/user-elections", { headers: { 'Authorization': `Bearer ${accessToken}` } })
+    //             ]);
+
+    //             if (!userRes.ok) throw new Error('Failed to fetch user data');
+    //             const userData = await userRes.json();
+    //             setUser(userData);
+
+    //             if (!electionsRes.ok) throw new Error('Failed to fetch elections data');
+    //             const electionsData = await electionsRes.json();
+    //             setElections(electionsData.elections || []);
+
+    //         } catch (err) {
+    //             console.error("Error fetching dashboard data:", err);
+    //             setError(err.message || "Could not load dashboard data.");
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+    //     fetchData();
+    // }, []);
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             setError('');
-            const accessToken = localStorage.getItem("accessToken");
-            if (!accessToken) {
-                setError("Authentication failed. Please log in.");
-                setLoading(false);
-                return;
-            }
+
             try {
-                // Fetch user and elections data in parallel for efficiency
-                const [userRes, electionsRes] = await Promise.all([
-                    fetch('/api/auth/current-user', { headers: { 'Authorization': `Bearer ${accessToken}` } }),
-                    fetch("/api/elections/user-elections", { headers: { 'Authorization': `Bearer ${accessToken}` } })
+                // --- 2. Use the new 'api' client. No need to get token or set headers manually. ---
+                const [userResponse, electionsResponse] = await Promise.all([
+                    api.get('/auth/current-user'),
+                    api.get("/elections/user-elections")
                 ]);
 
-                if (!userRes.ok) throw new Error('Failed to fetch user data');
-                const userData = await userRes.json();
-                setUser(userData);
-
-                if (!electionsRes.ok) throw new Error('Failed to fetch elections data');
-                const electionsData = await electionsRes.json();
-                setElections(electionsData.elections || []);
+                // --- 3. Axios puts the data directly in a 'data' property ---
+                setUser(userResponse.data);
+                setElections(electionsResponse.data.elections || []);
 
             } catch (err) {
+                // The interceptor will handle the 401 redirect automatically.
+                // This catch block will only handle other errors (e.g., server is down).
                 console.error("Error fetching dashboard data:", err);
-                setError(err.message || "Could not load dashboard data.");
+                setError(err.response?.data?.message || err.message || "Could not load dashboard data.");
             } finally {
                 setLoading(false);
             }
@@ -418,7 +447,7 @@ const Dashboard = () => {
             </div>
         );
     }
-    
+
     // --- ADDED: Conditional render for the details page ---
     if (showDetails && selectedElectionId) {
         return (
@@ -490,12 +519,12 @@ const Dashboard = () => {
                                                     <td className="px-6 py-4">
                                                         {status.text === 'Completed' ? (
                                                             <button onClick={() => navigate(`/election/${e.id}/results`)} className="font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-sm">
-                                                                <BarChart2 size={16}/> View Results
+                                                                <BarChart2 size={16} /> View Results
                                                             </button>
                                                         ) : (
                                                             // --- MODIFIED: onClick handler ---
                                                             <button onClick={() => handleViewElection(e.id)} className="font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-sm">
-                                                                <Eye size={16}/> View Details
+                                                                <Eye size={16} /> View Details
                                                             </button>
                                                         )}
                                                     </td>
