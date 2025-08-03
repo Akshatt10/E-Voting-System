@@ -3,8 +3,7 @@
 
     // This function sets up and starts the scheduled job
     const initScheduledJobs = () => {
-        // This cron expression means "every 5 seconds"
-        const scheduledJob = cron.schedule('* *9 * * *', () => {
+        const scheduledJob = cron.schedule('0 9 * * *', () => {
             console.log('---------------------');
             console.log('Running scheduled reminder task...');
             sendDailyReminders();

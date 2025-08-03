@@ -703,7 +703,6 @@ const CreateVoting = () => {
                   </button>
                 </div>
 
-                /* Display Total Share and Error */
                         <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
                           <div className="font-semibold text-gray-800">
                           Total Share:{" "}
