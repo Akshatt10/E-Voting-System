@@ -495,7 +495,7 @@ const Dashboard = () => {
                                 <table className="min-w-full divide-y divide-slate-200">
                                     <thead className="bg-slate-50">
                                         <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Election Title</th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Title of Metting</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Start Date</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">End Date</th>
