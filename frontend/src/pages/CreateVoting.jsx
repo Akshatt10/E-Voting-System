@@ -503,7 +503,7 @@ const CreateVoting = () => {
                     <input id="Matter" type="text" name="Matter" value={form.Matter} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 text-lg" placeholder="e.g., Board Resolution, Policy Amendment" autoFocus />
                   </div>
                   <div className="group">
-                    <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">Election Title *</label>
+                    <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">Title of Meeting *</label>
                     <input id="title" type="text" name="title" value={form.title} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors duration-200 text-lg" placeholder="e.g., Annual General Meeting 2024" />
                   </div>
 
@@ -610,8 +610,8 @@ const CreateVoting = () => {
               <div className="space-y-6 animate-fadeIn">
                 <div className="text-center mb-6">
                   <Users className="mx-auto text-indigo-600 mb-2" size={32} />
-                  <h2 className="text-2xl font-bold text-gray-800">Add Candidates</h2>
-                  <p className="text-gray-600">Who are the candidates for this election? Assign their share percentage.</p>
+                  <h2 className="text-2xl font-bold text-gray-800">Add COC members</h2>
+                  <p className="text-gray-600">Who are the candidates for this voting? Assign their share percentage.</p>
                 </div>
 
                 <div className="space-y-4">
@@ -699,7 +699,7 @@ const CreateVoting = () => {
                     className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors duration-200 flex items-center justify-center space-x-2"
                   >
                     <Plus size={20} />
-                    <span>Add Another Candidate</span>
+                    <span>Add Another COC member</span>
                   </button>
                 </div>
 
