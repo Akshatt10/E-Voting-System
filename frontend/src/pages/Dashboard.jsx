@@ -537,9 +537,9 @@ const Dashboard = () => {
                         ) : (
                             <div className="text-center text-slate-500 p-12">
                                 <Info className="mx-auto text-slate-400 mb-2" size={32} />
-                                <p>You haven't created any elections yet.</p>
+                                <p>You haven't created any meeting yet.</p>
                                 <Link to="/create-voting" className="text-indigo-600 font-semibold hover:underline mt-2 inline-block">
-                                    Create your first election
+                                    Schedule your first meeting 
                                 </Link>
                             </div>
                         )}
