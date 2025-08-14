@@ -794,7 +794,7 @@ const Home = () => {
                             <p className="text-5xl font-extrabold text-slate-900">
                                 {loadingStats ? '...' : <CountUpNumber end={stats.totalElections} />}
                             </p>
-                            <h3 className="text-lg font-semibold text-slate-600 mt-2">Total Elections Conducted</h3>
+                            <h3 className="text-lg font-semibold text-slate-600 mt-2">Total Meetings Conducted</h3>
                         </div>
                         <div className="bg-white p-8 rounded-xl ring-1 ring-slate-200">
                             <Users className="mx-auto text-indigo-600 mb-4" size={40} strokeWidth={1.5}/>
