@@ -8,12 +8,19 @@ const authRoutes = require('./routes/auth');
 const { PrismaClient } = require('@prisma/client');
 const { initScheduledJobs } = require('./jobs/reminderScheduler');
 const electionRoutes = require('./routes/electionRoutes');
+const { initializeSocket } = require('./services/socketService');
+const { startStatusUpdater } = require('./services/electionStatusService');
 
 
 const app = express();
 const prisma = new PrismaClient();
-
+const { Server } = require("socket.io");
+const http = require('http');
 const PORT = process.env.PORT || 5000;
+
+const server = http.createServer(app);
+
+
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -21,6 +28,14 @@ app.use(cors()); // Cross-origin support
 app.use(morgan('dev')); // Logs
 app.use(express.json()); // Parse JSON body
 app.use(cookieParser()); // If you use cookies (optional)
+
+
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:5173", // Your frontend URL
+        methods: ["GET", "POST"]
+    }
+});
 
 initScheduledJobs();
 // Health check
@@ -53,7 +68,11 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Start the status updater service
+initializeSocket(io);
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server with WebSocket support running on http://localhost:${PORT}`);
+  startStatusUpdater(io);
 });
