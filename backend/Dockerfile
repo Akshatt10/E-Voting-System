@@ -19,13 +19,9 @@ RUN npx prisma generate
 FROM node:18-alpine
 WORKDIR /app
 
-# Copy dependencies and built code
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app .
 
-# Expose the port the app runs on
 EXPOSE 3000
 
-# The command to run the application
-# It first applies any pending migrations and then starts the server.
 CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

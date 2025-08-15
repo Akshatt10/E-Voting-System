@@ -93,71 +93,95 @@ const createElection = async (req, res) => {
   }
 };
 
-// cancelElection remains the same
 const cancelElection = async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await prisma.election.update({
+
+    const updatedElection = await prisma.election.update({
       where: { id },
       data: {
-        isPublished: false,
-        status: VoteStatus.CANCELLED
+        // isPublished: false, // You may or may not want this
+        status: 'CANCELLED' // Using the enum value directly
       }
     });
-    res.json({ success: true, message: 'Election cancelled', updated });
+
+    // --- THIS IS THE KEY FIX ---
+    // Get the Socket.IO instance and emit an update to the creator's room
+    const io = req.app.get('socketio'); // Assumes you've attached io to the app instance
+    if (io && updatedElection.createdById) {
+        io.to(updatedElection.createdById).emit('electionUpdate', updatedElection);
+        console.log(`Sent 'CANCELLED' status update for election ${id} to user ${updatedElection.createdById}`);
+    }
+    // --- END OF FIX ---
+
+    res.json({ success: true, message: 'Election cancelled successfully', updated: updatedElection });
   } catch (error) {
     console.error('Cancel Election Error:', error);
     res.status(500).json({ success: false, message: 'Failed to cancel election' });
   }
 };
 
-// rescheduleElection remains the same
+
 const rescheduleElection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { startTime, endTime } = req.body;
+    try {
+        const { id } = req.params;
+        const { startTime, endTime } = req.body;
 
-    if (!startTime || !endTime) {
-      return res.status(400).json({
-        success: false,
-        message: 'startTime and endTime are required'
-      });
+        if (!startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: 'startTime and endTime are required'
+            });
+        }
+
+        const parsedStart = new Date(startTime);
+        const parsedEnd = new Date(endTime);
+        const now = new Date();
+
+        if (isNaN(parsedStart.getTime()) || isNaN(parsedEnd.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid date format.'
+            });
+        }
+
+        if (parsedEnd <= parsedStart) {
+            return res.status(400).json({
+                success: false,
+                message: 'End time must be after start time.'
+            });
+        }
+        let newStatus;
+        if (now < parsedStart) {
+            newStatus = 'SCHEDULED';
+        } else {
+            newStatus = 'ONGOING';
+        }
+
+        const updatedElection = await prisma.election.update({
+            where: { id },
+            data: {
+                startTime: parsedStart,
+                endTime: parsedEnd,
+                status: newStatus,
+            }
+        });
+        return res.json({ success: true, message: 'Election rescheduled successfully', updated: updatedElection });
+
+    } catch (error) {
+        console.error('Reschedule Election Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to reschedule election'
+        });
     }
-
-    const parsedStart = new Date(startTime);
-    const parsedEnd = new Date(endTime);
-
-    if (isNaN(parsedStart.getTime()) || isNaN(parsedEnd.getTime())) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid date format. Please use ISO format like 2025-06-11T10:00:00Z'
-      });
-    }
-
-    const updated = await prisma.election.update({
-      where: { id },
-      data: {
-        startTime: parsedStart,
-        endTime: parsedEnd
-      }
-    });
-
-    return res.json({ success: true, message: 'Election rescheduled', updated });
-
-  } catch (error) {
-    console.error('Reschedule Election Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to reschedule election'
-    });
-  }
 };
 
 const getAllElections = async (req, res) => {
   try {
     const elections = await prisma.election.findMany({
       orderBy: { startTime: 'desc' },
-      // --- MODIFIED: Include resolutions ---
+
       include: {
         candidates: true,
         resolutions: true
