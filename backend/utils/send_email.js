@@ -82,7 +82,6 @@ const sendVotingReminder = async (candidate, electionData) => {
   const { id: candidateId, name: candidateName, email: candidateEmail } = candidate;
   const { id: electionId, title, endTime } = electionData;
 
-  // --- Generate a new, secure voting token for the reminder ---
   const payload = { candidateId, electionId };
   const secret = process.env.JWT_SECRET;
   const nowInSeconds = Math.floor(Date.now() / 1000);
@@ -144,4 +143,28 @@ const sendVotingReminder = async (candidate, electionData) => {
 };
 
 
-module.exports = { sendCandidateNotification, sendVotingReminder };
+const sendPasswordResetEmail = async (userEmail, token) => {
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    
+    const mailOptions = {
+        from: '"IBC Voting" <noreply@ibcvoting.com>',
+        to: userEmail,
+        subject: 'Password Reset Request for Your IBC Voting Account',
+        html: `
+            <div style="font-family: sans-serif; padding: 20px;">
+                <h2>Password Reset Request</h2>
+                <p>You are receiving this email because a password reset request was initiated for your account.</p>
+                <p>Please click the link below to reset your password. This link is valid for 15 minutes.</p>
+                <a href="${resetUrl}" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                    Reset Your Password
+                </a>
+                <p>If you did not request a password reset, please ignore this email.</p>
+            </div>
+        `,
+    };
+
+    return transporter.sendMail(mailOptions);
+};
+
+
+module.exports = { sendCandidateNotification, sendVotingReminder, sendPasswordResetEmail };

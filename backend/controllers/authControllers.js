@@ -7,6 +7,8 @@ const {
   verifyRefreshToken,
   revokeRefreshToken,
 } = require('../utils/jwt');
+const { sendPasswordResetEmail } = require('../utils/send_email');
+const jwt = require('jsonwebtoken');
 
 const prisma = new PrismaClient();
 
@@ -306,6 +308,63 @@ const getPublicStats = async (req, res) => {
     }
 };
 
+const requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (user) {
+            // Create a short-lived token containing the user's ID
+            const payload = { userId: user.id };
+            const secret = process.env.PASSWORD_RESET_JWT_SECRET;
+            const token = jwt.sign(payload, secret, { expiresIn: '15m' }); // Token is valid for 15 minutes
+
+            await sendPasswordResetEmail(user.email, token);
+        }
+
+        res.status(200).json({ success: true, message: 'If an account with that email exists, a password reset link has been sent.' });
+    } catch (error) {
+        console.error("Request Password Reset Error:", error);
+        res.status(500).json({ success: false, message: 'An internal server error occurred.' });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+        }
+
+        // 1. Verify the token
+        const secret = process.env.PASSWORD_RESET_JWT_SECRET;
+        const decoded = jwt.verify(token, secret);
+        const { userId } = decoded;
+
+        // 2. Hash the new password
+        const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        // 3. Update the user's password in the database
+        await prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash: hashedPassword },
+        });
+
+        res.status(200).json({ success: true, message: 'Password has been reset successfully.' });
+    } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            return res.status(400).json({ success: false, message: 'Password reset link has expired. Please request a new one.' });
+        }
+        if (error instanceof jwt.JsonWebTokenError) {
+            return res.status(400).json({ success: false, message: 'Invalid password reset link.' });
+        }
+        console.error("Reset Password Error:", error);
+        res.status(500).json({ success: false, message: 'An internal server error occurred.' });
+    }
+};
+
 module.exports = {
   register,
   login,
@@ -315,5 +374,7 @@ module.exports = {
   getProfile,
   currentUser,
   updateProfile,
-  getPublicStats
+  getPublicStats,
+  requestPasswordReset,
+  resetPassword,
 };

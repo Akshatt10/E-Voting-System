@@ -269,10 +269,10 @@
 //                     return (
 //                       <React.Fragment key={item.id}>
 //                         <tr className="hover:bg-gray-50">
-//                           <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
-//                           <td className="px-6 py-4 text-sm text-gray-900">{item.Matter}</td>
-//                           <td className="px-6 py-4 text-sm text-gray-900">{item.title}</td>
-//                           <td className="px-6 py-4 text-sm text-gray-900">
+//                           <td className="px-6 py-4 text-xs text-gray-900">{index + 1}</td>
+//                           <td className="px-6 py-4 text-xs text-gray-900">{item.Matter}</td>
+//                           <td className="px-6 py-4 text-xs text-gray-900">{item.title}</td>
+//                           <td className="px-6 py-4 text-xs text-gray-900">
 //                             <button
 //                               onClick={async () => {
 //                                 const alreadyOpen = expandedRow === item.id;
@@ -286,8 +286,8 @@
 //                               Click Here
 //                             </button>
 //                           </td>
-//                           <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.startTime)}</td>
-//                           <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.endTime)}</td>
+//                           <td className="px-6 py-4 text-xs text-gray-500">{formatDateTime(item.startTime)}</td>
+//                           <td className="px-6 py-4 text-xs text-gray-500">{formatDateTime(item.endTime)}</td>
 //                           <td className="px-6 py-4">
 //                             {status.text === "Completed" ? (
 //                               <button
@@ -303,10 +303,10 @@
 //                               </span>
 //                             )}
 //                           </td>
-                          
-//                           <td className="px-10 py-4 text-sm flex items-center gap-2">
+
+//                           <td className="px-10 py-4 text-xs flex items-center gap-2">
 //                              <button onClick={() => handleViewElection(item.id)} className="text-blue-600 hover:text-blue-800"><Eye size={16} /></button>
-                             
+
 //                           </td>
 //                         </tr>
 
@@ -316,7 +316,7 @@
 //                               {candidatesMap[item.id] ? (
 //                                 candidatesMap[item.id].length > 0 ? (
 //                                   <div className="overflow-x-auto">
-//                                     <table className="min-w-full text-sm border rounded-md">
+//                                     <table className="min-w-full text-xs border rounded-md">
 //                                       {/* This is the full table from your original code */}
 //                                       <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
 //                                         <tr>
@@ -507,19 +507,19 @@ const VoteStatus = () => {
     };
 
     const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
+        const date = new Date(dateString);
 
-    return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'Asia/Kolkata'   
-    }) + ' | ' + date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: 'Asia/Kolkata'
-    });
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            timeZone: 'Asia/Kolkata'
+        }) + ' | ' + date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'Asia/Kolkata'
+        });
     };
 
 
@@ -557,7 +557,7 @@ const VoteStatus = () => {
                 {!loading && !error && elections.length > 0 && (
                     <div className="bg-white rounded-lg shadow overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200 text-xs">
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sr No</th>
@@ -576,10 +576,10 @@ const VoteStatus = () => {
                                         return (
                                             <React.Fragment key={item.id}>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-900">{item.Matter}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-900">{item.title}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                                    <td className="px-6 py-4 text-xs text-gray-900">{index + 1}</td>
+                                                    <td className="px-6 py-4 text-xs text-gray-900">{item.Matter}</td>
+                                                    <td className="px-6 py-4 text-xs text-gray-900">{item.title}</td>
+                                                    <td className="px-6 py-4 text-xs text-gray-900">
                                                         <button
                                                             onClick={async () => {
                                                                 const alreadyOpen = expandedRow === item.id;
@@ -593,8 +593,12 @@ const VoteStatus = () => {
                                                             Click Here
                                                         </button>
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.startTime)}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(item.endTime)}</td>
+                                                    <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                                                        {formatDateTime(item.startTime)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                                                        {formatDateTime(item.endTime)}
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         {status.text === "Completed" ? (
                                                             <button
@@ -611,7 +615,7 @@ const VoteStatus = () => {
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td className="px-10 py-4 text-sm flex items-center gap-2">
+                                                    <td className="px-10 py-4 text-xs flex items-center gap-2">
                                                         <button onClick={() => handleViewElection(item.id)} className="text-blue-600 hover:text-blue-800"><Eye size={16} /></button>
                                                     </td>
                                                 </tr>
@@ -621,7 +625,7 @@ const VoteStatus = () => {
                                                             {candidatesMap[item.id] ? (
                                                                 candidatesMap[item.id].length > 0 ? (
                                                                     <div className="overflow-x-auto">
-                                                                        <table className="min-w-full text-sm border rounded-md">
+                                                                        <table className="min-w-full text-xs border rounded-md">
                                                                             <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
                                                                                 <tr>
                                                                                     <th className="px-4 py-2 border">Sr No</th>

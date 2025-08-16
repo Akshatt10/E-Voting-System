@@ -15,7 +15,9 @@ const {
   getProfile,
   currentUser,
   updateProfile,
-  getPublicStats
+  getPublicStats,
+  requestPasswordReset,
+  resetPassword
 } = require('../controllers/authControllers');
 
 const router = express.Router();
@@ -73,6 +75,10 @@ router.post('/logout', logout);
 router.get('/current-user', authenticateToken, currentUser);
 
 router.get('/profile', authenticateToken, getProfile);
+
+router.post('/request-password-reset', requestPasswordReset);
+router.post('/reset-password', resetPassword);
+
 router.post('/logout-all', authenticateToken, logoutAll);
 
 module.exports = router;
