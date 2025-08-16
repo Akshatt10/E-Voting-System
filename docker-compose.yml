@@ -11,7 +11,8 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -27,14 +28,15 @@ services:
     networks:
       - app-network
 
+  # Database Service
   db:
     image: postgres:16
-    container_name: db
+    container_name: db 
     restart: always
     environment:
-      - POSTGRES_USER=
-      - POSTGRES_PASSWORD=
-      - POSTGRES_DB=
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin123
+      - POSTGRES_DB=E-Voting-db
     ports:
       - "5432:5432"
     volumes:
@@ -42,6 +44,13 @@ services:
     networks:
       - app-network
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d E-Voting-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Adminer Service
   adminer:
     image: adminer
     container_name: adminer-UI
