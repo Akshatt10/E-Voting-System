@@ -9,9 +9,11 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./backend/.env # Load environment variables from this file
+      - ./backend/.env
+    # --- MODIFIED: Added depends_on with a healthcheck condition ---
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -21,16 +23,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80" # Map host port 80 to container port 80
+      - "80:80"
     depends_on:
       - backend
     networks:
       - app-network
 
-  # Database Service (Updated with your configuration)
+  # Database Service
   db:
     image: postgres:16
-    container_name: db
+    container_name: db # It's better practice to use the service name 'db'
     restart: always
     environment:
       - POSTGRES_USER=admin
@@ -42,8 +44,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    # --- NEW: Added a healthcheck to ensure the DB is ready ---
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d E-Voting-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Adminer Service (Added from your configuration)
+  # Adminer Service
   adminer:
     image: adminer
     container_name: adminer-UI

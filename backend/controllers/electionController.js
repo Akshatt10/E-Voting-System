@@ -21,18 +21,19 @@ const createElection = async (req, res) => {
 
     const { Matter, title, resolutions, startTime, endTime, candidates } = req.body;
 
-    // Basic validation for resolutions
     if (!resolutions || !Array.isArray(resolutions) || resolutions.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one resolution is required.' });
     }
+
+    const parsedStart = new Date(startTime);
+    const parsedEnd = new Date(endTime);
 
     const election = await prisma.election.create({
       data: {
         Matter,
         title,
-        // --- REMOVED: 'description' field is no longer on the Election model ---
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime: parsedStart.toISOString(), // store in UTC
+        endTime: parsedEnd.toISOString(),
         isPublished: true,
         createdBy: {
           connect: { id: userId }
