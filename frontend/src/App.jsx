@@ -17,6 +17,8 @@ import ElectionDetails from './pages/ElectionDetails';
 import VotingPage from './pages/VotingPage';
 import VoteResultPage from './pages/VoteResultPage';
 import PaymentHistory from './pages/PaymentHistory';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/contact" element={<Contact/>}/>
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         
         {/* The Magic Link route for voting (public but secure) */}
         <Route path="/elections/vote/:token" element={<VotingPage />} />
