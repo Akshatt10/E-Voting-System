@@ -13,61 +13,71 @@ const jwt = require('jsonwebtoken');
 const prisma = new PrismaClient();
 
 const register = async (req, res) => {
-  try {
-    const { email,IBBI, password, firstName, lastName, phone } = req.body;
+    try {
+        const { email, IBBI, password, firstName, lastName, phone } = req.body;
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
 
-    if (existingUser) {
-      return res.status(409).json({ success: false, message: 'User already exists' });
+        const existingUserByEmail = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (existingUserByEmail) {
+            return res.status(409).json({ success: false, message: 'An account with this email address already exists.' });
+        }
+        
+        const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        let user;
+        try {
+            user = await prisma.user.create({
+                data: {
+                    email,
+                    IBBI: IBBI,
+                    firstname: firstName,
+                    lastname: lastName,
+                    phone: phone,
+                    passwordHash: hashedPassword,
+                    role: 'VOTER',
+                },
+            });
+        } catch (error) {
+            // Check if the error is a Prisma unique constraint violation
+            if (error.code === 'P2002') {
+                const field = error.meta.target[0];
+                return res.status(409).json({ success: false, message: `An account with this ${field} already exists.` });
+            }
+
+            throw error;
+        }
+
+        const accessToken = generateAccessToken({ userId: user.id, email: user.email });
+        const refreshToken = generateRefreshToken();
+
+        await storeRefreshToken(user.id, refreshToken);
+
+        res.status(201).json({
+            success: true,
+            message: 'User registered successfully',
+            data: {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    IBBI: user.IBBI,
+                    firstName: user.firstname,
+                    lastName: user.lastname,
+                    phone: user.phone,
+                    createdAt: user.createdAt,
+                },
+                accessToken,
+                refreshToken,
+            },
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
-
-    const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const user = await prisma.user.create({
-    data: {
-      email,
-      IBBI:  IBBI,
-      firstname: firstName,
-      lastname: lastName,
-      phone: phone,
-      passwordHash: hashedPassword,
-      role: 'VOTER',
-  },
-});
-
-
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email });
-    const refreshToken = generateRefreshToken();
-
-    await storeRefreshToken(user.id, refreshToken);
-
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          IBBI: user.IBBI,
-          firstName: user.firstname,
-          lastName: user.lastname,
-          phone: user.phone,
-          createdAt: user.createdAt,
-        },
-        accessToken,
-        refreshToken,
-      },
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
 };
-
 
 const login = async (req, res) => {
   try {
@@ -241,7 +251,6 @@ const getProfile = async (req, res) => {
 
 };
 
-// Update profile controller
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -277,7 +286,6 @@ const updateProfile = async (req, res) => {
     });
   }
 };
-
 
 const getPublicStats = async (req, res) => {
     try {
