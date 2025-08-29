@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import {     Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail, Scale, Bold, Italic, 
-    Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, CreditCard, Landmark, 
-    Smartphone, Shield, Loader2  } from "lucide-react";
+import {
+  Calendar, Clock, Users, FileText, Plus, X, CheckCircle, AlertCircle, Mail, Scale, Bold, Italic,
+  Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, CreditCard, Landmark,
+  Smartphone, Shield, Loader2
+} from "lucide-react";
 
+// RichTextEditor component (assuming it's in the same file or imported)
 const RichTextEditor = ({ value, onChange, placeholder = "Provide details for this resolution..." }) => {
   const editorRef = useRef(null);
   const isUserTyping = useRef(false);
@@ -17,7 +20,7 @@ const RichTextEditor = ({ value, onChange, placeholder = "Provide details for th
   const execCommand = (command, val = null) => {
     document.execCommand(command, false, val);
     editorRef.current?.focus();
-    handleInput(); // Update state after command
+    handleInput();
   };
 
   useEffect(() => {
@@ -27,32 +30,27 @@ const RichTextEditor = ({ value, onChange, placeholder = "Provide details for th
     isUserTyping.current = false;
   }, [value]);
 
-  // A simple check for empty content
   const isEmpty = !value || value === '<p><br></p>' || value === '<div><br></div>';
 
   return (
     <div className="border-2 border-gray-200 rounded-xl overflow-hidden focus-within:border-indigo-500 transition-colors duration-200 relative">
-      {/* Toolbar */}
       <div className="bg-gray-50 border-b border-gray-200 p-3">
         <div className="flex flex-wrap gap-1 items-center">
-          {/* Text Formatting */}
+          {/* Toolbar buttons */}
           <div className="flex border-r border-gray-300 pr-2 mr-2">
             <button type="button" onClick={() => execCommand('bold')} className="p-2 hover:bg-gray-200 rounded" title="Bold"><Bold size={16} /></button>
             <button type="button" onClick={() => execCommand('italic')} className="p-2 hover:bg-gray-200 rounded" title="Italic"><Italic size={16} /></button>
             <button type="button" onClick={() => execCommand('underline')} className="p-2 hover:bg-gray-200 rounded" title="Underline"><Underline size={16} /></button>
           </div>
-          {/* Alignment */}
           <div className="flex border-r border-gray-300 pr-2 mr-2">
             <button type="button" onClick={() => execCommand('justifyLeft')} className="p-2 hover:bg-gray-200 rounded" title="Align Left"><AlignLeft size={16} /></button>
             <button type="button" onClick={() => execCommand('justifyCenter')} className="p-2 hover:bg-gray-200 rounded" title="Align Center"><AlignCenter size={16} /></button>
             <button type="button" onClick={() => execCommand('justifyRight')} className="p-2 hover:bg-gray-200 rounded" title="Align Right"><AlignRight size={16} /></button>
           </div>
-          {/* Lists */}
           <div className="flex border-r border-gray-300 pr-2 mr-2">
             <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-2 hover:bg-gray-200 rounded" title="Bullet List"><List size={16} /></button>
             <button type="button" onClick={() => execCommand('insertOrderedList')} className="p-2 hover:bg-gray-200 rounded" title="Numbered List"><ListOrdered size={16} /></button>
           </div>
-          {/* Font Size */}
           <div className="flex items-center">
             <select onChange={(e) => execCommand('fontSize', e.target.value)} className="text-sm border border-gray-300 rounded px-2 py-1 bg-white" title="Font Size" defaultValue="3">
               <option value="1">Small</option>
@@ -63,7 +61,6 @@ const RichTextEditor = ({ value, onChange, placeholder = "Provide details for th
           </div>
         </div>
       </div>
-      {/* Editable Area */}
       <div
         ref={editorRef}
         contentEditable
@@ -71,7 +68,6 @@ const RichTextEditor = ({ value, onChange, placeholder = "Provide details for th
         onInput={handleInput}
         suppressContentEditableWarning={true}
       />
-      {/* Placeholder */}
       {isEmpty && (
         <div className="absolute top-[calc(3rem+1rem+8px)] left-4 text-gray-400 pointer-events-none">
           {placeholder}
@@ -81,16 +77,17 @@ const RichTextEditor = ({ value, onChange, placeholder = "Provide details for th
   );
 };
 
-const RazorpayStaticUI = ({ onCancel, electionTitle }) => {
+// --- NEW: Static Razorpay UI Component ---
+const RazorpayStaticUI = ({ onCancel, electionTitle, onSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePay = () => {
     setIsProcessing(true);
+    // Simulate a network request
     setTimeout(() => {
-      alert("This is a static UI. In a real application, this would process the payment and create the election.");
       setIsProcessing(false);
-      onCancel(); // Close modal on "success"
+      onSuccess(); // Call the success handler
     }, 2000);
   };
 
@@ -169,16 +166,12 @@ const RazorpayStaticUI = ({ onCancel, electionTitle }) => {
   );
 };
 
+
 const CreateVoting = () => {
   const [form, setForm] = useState({
     Matter: "",
     title: "",
-    // Replaced 'description' with a 'resolutions' array
-    resolutions: [{
-      title: "",
-      description: "",
-      options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" }
-    }],
+    resolutions: [{ title: "", description: "", options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" } }],
     startTime: "",
     endTime: "",
     candidates: [{ name: "", email: "", share: "" }],
@@ -190,11 +183,9 @@ const CreateVoting = () => {
   const [totalShareError, setTotalShareError] = useState("");
   const [showPaymentUI, setShowPaymentUI] = useState(false);
 
-
-  // --- NEW Handlers for Resolutions ---
   const handleResolutionChange = (index, field, value) => {
     const updatedResolutions = [...form.resolutions];
-    const keys = field.split('.'); // For nested fields like 'options.agree'
+    const keys = field.split('.');
     if (keys.length === 2) {
       updatedResolutions[index][keys[0]][keys[1]] = value;
     } else {
@@ -214,17 +205,15 @@ const CreateVoting = () => {
   };
 
   const removeResolution = (index) => {
-    if (form.resolutions.length <= 1) return; // Prevent removing the last one
+    if (form.resolutions.length <= 1) return;
     const updatedResolutions = form.resolutions.filter((_, i) => i !== index);
     setForm({ ...form, resolutions: updatedResolutions });
   };
-  // --- End of New Handlers ---
 
   const calculateTotalShare = () => {
     const validShares = form.candidates
       .map(c => parseFloat(c.share))
       .filter(share => !isNaN(share) && share >= 0);
-
     const sum = validShares.reduce((acc, curr) => acc + curr, 0);
     return parseFloat(sum.toFixed(2));
   };
@@ -267,97 +256,6 @@ const CreateVoting = () => {
     return emailRegex.test(email);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    // Validations...
-    if (form.resolutions.some(r => r.title.trim() === "")) {
-      setError("Please provide a title for every resolution.");
-      setLoading(false);
-      setCurrentStep(1);
-      return;
-    }
-
-    // ... (rest of the validations: candidates, shares, time, etc.)
-    const validCandidates = form.candidates.filter(c => c.name.trim());
-    if (validCandidates.length < 2) {
-      setError("Please enter at least two candidate names.");
-      setLoading(false);
-      return;
-    }
-    const invalidEmails = validCandidates.filter(c => c.email && !validateEmail(c.email));
-    if (invalidEmails.length > 0) {
-      setError("Please enter valid email addresses for all candidates.");
-      setLoading(false);
-      return;
-    }
-    const invalidShares = form.candidates.filter(c => isNaN(parseFloat(c.share)) || parseFloat(c.share) < 0 || c.share === '');
-    if (invalidShares.length > 0) {
-      setError("Please enter valid non-negative share percentages for all candidates.");
-      setLoading(false);
-      return;
-    }
-    const total = calculateTotalShare();
-    if (total !== 100) {
-      setError(`The total share for all candidates must be exactly 100%. Current total is ${total}%.`);
-      setLoading(false);
-      return;
-    }
-    if (form.endTime <= form.startTime) {
-      setError("End time must be after start time.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const candidatesToSend = form.candidates.map(c => ({ ...c, share: parseFloat(c.share) }));
-
-      const response = await fetch('/api/elections/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          Matter: form.Matter,
-          title: form.title,
-          resolutions: form.resolutions, // Send resolutions array
-          startTime: form.startTime,
-          endTime: form.endTime,
-          candidates: candidatesToSend
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setSuccess("Election created successfully!");
-        setTimeout(() => {
-          setForm({
-            Matter: "",
-            title: "",
-            resolutions: [{ title: "", description: "", options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" } }],
-            startTime: "",
-            endTime: "",
-            candidates: [{ name: "", email: "", share: "" }]
-          });
-          setCurrentStep(1);
-          setSuccess("");
-        }, 3000);
-      } else {
-        setError(data.message || "Failed to create election.");
-      }
-    } catch (err) {
-      console.error('Error creating election:', err);
-      setError("Network error. Please try again.");
-    }
-    setLoading(false);
-  };
-
   const getNowLocal = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -367,7 +265,6 @@ const CreateVoting = () => {
   const isStepComplete = (step) => {
     switch (step) {
       case 1:
-        // Updated validation for resolutions
         return form.Matter.trim() !== "" && form.title.trim() !== "" && form.resolutions.every(r => r.title.trim() !== "");
       case 2:
         return form.startTime !== "" && form.endTime !== "";
@@ -410,8 +307,6 @@ const CreateVoting = () => {
   const handleProceedToPayment = (e) => {
     e.preventDefault();
     setError("");
-
-    // Run all final validations before showing payment modal
     if (!isStepComplete(1) || !isStepComplete(2) || !isStepComplete(3)) {
       setError("Please complete all previous steps accurately before proceeding to payment.");
       return;
@@ -420,9 +315,56 @@ const CreateVoting = () => {
       setError(totalShareError);
       return;
     }
-
-    // If all validations pass, show the payment UI
     setShowPaymentUI(true);
+  };
+
+  // This is the original function that will be called after a successful payment
+  const createElectionAfterPayment = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const candidatesToSend = form.candidates.map(c => ({ ...c, share: parseFloat(c.share) }));
+      const response = await fetch('/api/elections/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          Matter: form.Matter,
+          title: form.title,
+          resolutions: form.resolutions,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          candidates: candidatesToSend
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to create election.");
+      return data;
+    } catch (err) {
+      setError(err.message || "Network error.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    setShowPaymentUI(false);
+    const result = await createElectionAfterPayment();
+    if (result && result.success) {
+      setSuccess("Payment successful! Your election has been created.");
+      setTimeout(() => {
+        setForm({
+          Matter: "", title: "", resolutions: [{ title: "", description: "", options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" } }],
+          startTime: "", endTime: "", candidates: [{ name: "", email: "", share: "" }]
+        });
+        setCurrentStep(1);
+        setSuccess("");
+      }, 3000);
+    }
   };
 
   const steps = [
@@ -431,12 +373,11 @@ const CreateVoting = () => {
     { id: 3, title: "Candidates", icon: Users },
   ];
 
-  const isSubmitDisabled = loading || totalShareError !== "" || form.candidates.filter(c => c.name.trim()).length < 2 || form.candidates.some(c => c.email && !validateEmail(c.email)) || form.candidates.some(c => parseFloat(c.share) < 0 || c.share === '');
+  const isSubmitDisabled = loading || totalShareError !== "" || !isStepComplete(3);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
-      {/* --- NEW: Conditionally render the payment UI --- */}
-      {showPaymentUI && <RazorpayStaticUI onCancel={() => setShowPaymentUI(false)} electionTitle={form.title} />}
+      {showPaymentUI && <RazorpayStaticUI onCancel={() => setShowPaymentUI(false)} onSuccess={handlePaymentSuccess} electionTitle={form.title} />}
 
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
@@ -444,43 +385,27 @@ const CreateVoting = () => {
           <p className="text-gray-600">Set up a secure and transparent election in just a few steps</p>
         </div>
 
-
         <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = isStepComplete(step.id); // This will now consider share sum for step 3
-              const isClickable = (step.id === 1) ||
-                (step.id === 2 && isStepComplete(1)) ||
-                (step.id === 3 && isStepComplete(1) && isStepComplete(2)); // Still allow clicking to step 3 if previous steps are valid
-
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-60"
-                      } ${isCompleted && step.id !== currentStep // Only show completed for past steps, current step shows active
-                        ? "bg-green-500 border-green-500 text-white"
-                        : isActive
-                          ? "bg-indigo-600 border-indigo-600 text-white"
-                          : "bg-white border-gray-300 text-gray-400"
-                      }`}
-                    onClick={() => isClickable && handleStepClick(step.id)}
-                  >
-                    {isCompleted && step.id !== currentStep ? <CheckCircle size={20} /> : <Icon size={20} />}
-                  </div>
-                  <div className="ml-2">
-                    <p className={`text-sm font-medium ${isActive ? "text-indigo-600" : "text-gray-500"}`}>
-                      {step.title}
-                    </p>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`w-16 h-0.5 mx-4 ${isCompleted ? "bg-green-500" : "bg-gray-300"}`} />
-                  )}
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = currentStep === step.id;
+            const isCompleted = isStepComplete(step.id);
+            const isClickable = (step.id === 1) || (step.id === 2 && isStepComplete(1)) || (step.id === 3 && isStepComplete(1) && isStepComplete(2));
+            return (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className={`flex items-center justify-center w-12 h-12 rounded-full border-2 ... ${isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-60"} ...`}
+                  onClick={() => isClickable && handleStepClick(step.id)}
+                >
+                  {isCompleted && step.id !== currentStep ? <CheckCircle size={20} /> : <Icon size={20} />}
                 </div>
-              );
-            })}
-          </div>
+                <div className="ml-2">
+                  <p className={`text-sm font-medium ${isActive ? "text-indigo-600" : "text-gray-500"}`}>{step.title}</p>
+                </div>
+                {index < steps.length - 1 && <div className={`w-16 h-0.5 mx-4 ${isCompleted ? "bg-green-500" : "bg-gray-300"}`} />}
+              </div>
+            );
+          })}
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -703,41 +628,40 @@ const CreateVoting = () => {
                   </button>
                 </div>
 
-                        <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
-                          <div className="font-semibold text-gray-800">
-                          Total Share:{" "}
-                          <span className={calculateTotalShare() === 100 ? "text-green-600" : "text-red-600"}>
-                            {calculateTotalShare()}%
-                          </span>
-                          </div>
-                          {totalShareError && (
-                          <p className="text-red-500 text-sm flex items-center">
-                            <AlertCircle size={16} className="mr-1" />
-                            {totalShareError}
-                          </p>
-                          )}
-                        </div>
-                        </div>
-                      )}
+                <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
+                  <div className="font-semibold text-gray-800">
+                    Total Share:{" "}
+                    <span className={calculateTotalShare() === 100 ? "text-green-600" : "text-red-600"}>
+                      {calculateTotalShare()}%
+                    </span>
+                  </div>
+                  {totalShareError && (
+                    <p className="text-red-500 text-sm flex items-center">
+                      <AlertCircle size={16} className="mr-1" />
+                      {totalShareError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
-                      <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-                        <div className="flex space-x-3">
-                        {/* Removed the Next button here */}
-                        {currentStep === 3 && (
-                          // --- MODIFIED: Final button now triggers payment ---
-                          <button
-                          type="button"
-                          className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white ..."
-                          disabled={isSubmitDisabled}
-                          onClick={handleProceedToPayment}
-                          >
-                          {loading ? 'Processing...' : 'Proceed to Payment'}
-                          </button>
-                        )}
-                        </div>
-                      </div>
+            <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+              <div className="flex space-x-3">
+                {/* Removed the Next button here */}
+                {currentStep === 3 && (
+                  // --- MODIFIED: Final button now triggers payment ---
+                  <button
+                    type="button"
+                    className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white ..."
+                    disabled={isSubmitDisabled}
+                    onClick={handleProceedToPayment}
+                  >
+                    {loading ? 'Processing...' : 'Proceed to Payment'}
+                  </button>
+                )}
+              </div>
+            </div>
 
-                      {/* Existing completion message - adjust if needed */}
             {currentStep === 3 && form.candidates.filter(c => c.name.trim()).length >= 2 && calculateTotalShare() === 100 && (
               <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
                 <p className="text-green-800 text-sm">
@@ -751,50 +675,23 @@ const CreateVoting = () => {
             )}
           </div>
         </div>
-
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-            className={`px-6 py-3 rounded-xl font-semibold transition-colors duration-200 ${currentStep === 1
-              ? "text-gray-400 cursor-not-allowed"
-              : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-              }`}
-            disabled={currentStep === 1}
-          >
+          <button type="button" onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} className="..." disabled={currentStep === 1}>
             Previous
           </button>
-
           <div className="flex space-x-3">
             {currentStep < 3 ? (
-              <button
-                type="button"
-                onClick={handleNextStep}
-                className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors duration-200 flex items-center space-x-2"
-              >
+              <button type="button" onClick={handleNextStep} className="...">
                 <span>Next</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
               </button>
             ) : (
               <button
-                type="submit"
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSubmitDisabled} // Use the new disabled logic here
-                onClick={handleSubmit}
+                type="button"
+                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white ..."
+                disabled={isSubmitDisabled}
+                onClick={handleProceedToPayment}
               >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={20} />
-                    Create Election
-                  </>
-                )}
+                {loading ? 'Processing...' : 'Proceed to Payment'}
               </button>
             )}
           </div>
@@ -857,10 +754,5 @@ const CreateVoting = () => {
 };
 
 export default CreateVoting;
-
-
-
-
-
 
 
