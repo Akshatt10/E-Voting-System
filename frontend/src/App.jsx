@@ -24,7 +24,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* --- PUBLIC ROUTES --- */}
+
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
@@ -51,8 +51,6 @@ function App() {
           <Route path="/payment-history" element={<PaymentHistory />} />
         </Route>
 
-        {/* --- CATCH-ALL ROUTE (MUST BE LAST) --- */}
-        {/* If no other route matches, this one will be used. */}
         <Route path="*" element={<Home />} />
       </Routes>
     </Router>

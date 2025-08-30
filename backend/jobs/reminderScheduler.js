@@ -13,7 +13,6 @@
         });
 
         scheduledJob.start();
-        console.log('Reminder job has been scheduled to run every 5 seconds.');
     };
 
     module.exports = { initScheduledJobs };

@@ -289,13 +289,13 @@ const Dashboard = () => {
             // 3. Listen for 'electionUpdate' events from the server
             const handleElectionUpdate = (updatedElection) => {
                 console.log('Received real-time election update:', updatedElection);
-                setElections(prevElections => 
-                    prevElections.map(e => 
+                setElections(prevElections =>
+                    prevElections.map(e =>
                         e.id === updatedElection.id ? { ...e, status: updatedElection.status } : e
                     )
                 );
             };
-            
+
             socket.on('electionUpdate', handleElectionUpdate);
 
             // Cleanup function: This runs when the component unmounts
@@ -406,10 +406,10 @@ const Dashboard = () => {
                     <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
                         {recentActivity.length > 0 ? (
                             <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-200">
+                                <table className="w-full divide-y divide-slate-200">
                                     <thead className="bg-slate-50">
                                         <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Title of Metting</th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Title of Meeting</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Start Date</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">End Date</th>
@@ -418,18 +418,21 @@ const Dashboard = () => {
                                     </thead>
                                     <tbody className="bg-white divide-y divide-slate-200">
                                         {recentActivity.map(e => {
-                                            const status = getStatus(e.startTime, e.endTime, e.status);
+                                            const status = getStatus(e.status);
                                             return (
                                                 <tr key={e.id} className="hover:bg-slate-50/75 transition-colors">
-                                                    <td className="px-6 py-4 font-medium text-slate-900">{e.title}</td>
+                                                    {/* --- THIS IS THE FIX --- */}
+                                                    <td className="px-6 py-4 font-medium text-slate-900 max-w-xs">
+                                                        <p className="truncate" title={e.title}>{e.title}</p>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${status.bgColor} ${status.color}`}>
                                                             <status.icon size={14} />
                                                             {status.text}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-slate-600">{new Date(e.startTime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                                                    <td className="px-6 py-4 text-slate-600">{new Date(e.endTime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{new Date(e.startTime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                                    <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{new Date(e.endTime).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                                                     <td className="px-6 py-4">
                                                         {status.text === 'Completed' ? (
                                                             <button onClick={() => navigate(`/election/${e.id}/results`)} className="font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-sm">
@@ -452,7 +455,7 @@ const Dashboard = () => {
                                 <Info className="mx-auto text-slate-400 mb-2" size={32} />
                                 <p>You haven't created any meeting yet.</p>
                                 <Link to="/create-voting" className="text-indigo-600 font-semibold hover:underline mt-2 inline-block">
-                                    Schedule your first meeting 
+                                    Schedule your first meeting
                                 </Link>
                             </div>
                         )}

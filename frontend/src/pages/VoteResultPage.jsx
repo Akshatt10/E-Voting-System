@@ -4,9 +4,9 @@ import { Loader2, AlertTriangle, FileText, ArrowLeft, Download, FileSpreadsheet,
 import * as XLSX from 'xlsx';
 
 // --- Helper component for the outcome badge ---
-const ResultBadge = ({ totals }) => {
-    const participatingShares = totals.accept + totals.reject;
-    const isApproved = participatingShares > 0 && (totals.accept / participatingShares) > 0.66;
+const ResultBadge = ({ totals, totalCoCShares }) => {
+
+    const isApproved = totalCoCShares > 0 && (totals.accept / totalCoCShares) >= 0.66;
 
     const baseClasses = "flex items-center gap-2 text-sm font-bold px-3 py-1 rounded-full";
     if (isApproved) {
@@ -49,7 +49,7 @@ const VoteProgressBar = ({ totals }) => {
 const VoteResultPage = () => {
     const { electionId } = useParams();
     const navigate = useNavigate();
-    
+
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -103,7 +103,7 @@ const VoteResultPage = () => {
                 ]);
             });
             res.nonVoters.forEach(nonVoter => {
-                 excelData.push([ nonVoter.candidateName, 0, 0, 0, nonVoter.share, 'NA' ]);
+                excelData.push([nonVoter.candidateName, 0, 0, 0, nonVoter.share, 'NA']);
             });
             excelData.push([]);
             excelData.push(['Total', res.totals.accept, res.totals.reject, res.totals.abstain, res.totals.notVoted]);
@@ -120,17 +120,22 @@ const VoteResultPage = () => {
         let totalSharesPossible = 0;
         let totalSharesVoted = 0;
         let resolutionsPassed = 0;
+
         if (results.resolutions.length > 0) {
             const firstRes = results.resolutions[0];
-            totalSharesPossible = firstRes.votes.reduce((sum, v) => sum + v.share, 0) + firstRes.nonVoters.reduce((sum, nv) => sum + nv.share, 0);
+            totalSharesPossible = firstRes.totals.accept + firstRes.totals.reject + firstRes.totals.abstain + firstRes.totals.notVoted;
             totalSharesVoted = firstRes.totals.accept + firstRes.totals.reject + firstRes.totals.abstain;
         }
+
         results.resolutions.forEach(res => {
-            const participatingShares = res.totals.accept + res.totals.reject;
-            if (participatingShares > 0 && (res.totals.accept / participatingShares) > 0.66) {
+            // --- CORRECTED LOGIC ---
+            // Use the same total share logic for the summary card
+            const totalCoCShares = res.totals.accept + res.totals.reject + res.totals.abstain + res.totals.notVoted;
+            if (totalCoCShares > 0 && (res.totals.accept / totalCoCShares) >= 0.66) {
                 resolutionsPassed++;
             }
         });
+
         return {
             turnout: totalSharesPossible > 0 ? ((totalSharesVoted / totalSharesPossible) * 100).toFixed(2) : 0,
             passed: resolutionsPassed,
@@ -138,12 +143,6 @@ const VoteResultPage = () => {
         };
     }, [results]);
 
-    const toggleRow = (resolutionId) => {
-        setExpandedRows(prev => ({
-            ...prev,
-            [resolutionId]: !prev[resolutionId]
-        }));
-    };
 
     const formatDateTime = (isoString) => {
         if (!isoString) return 'NA';
@@ -185,32 +184,38 @@ const VoteResultPage = () => {
     return (
         <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
             <div className="max-w-7xl mx-auto">
-                <button 
+                <button
                     onClick={() => navigate('/vote-status')}
                     className="flex items-center gap-2 text-indigo-600 font-semibold mb-6 hover:underline"
                 >
                     <ArrowLeft size={20} />
                     Back to Vote Status
                 </button>
-                
+
                 <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm ring-1 ring-slate-200">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 border-b border-slate-200 pb-6">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900">{results.electionTitle}</h1>
-                            <p className="text-base md:text-lg text-slate-500 mt-2">{results.electionMatter}</p>
+                        {/* This div now grows and allows its content to be truncated */}
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-3xl md:text-2xl font-bold text-slate-900 truncate" title={results.electionTitle}>
+                                {results.electionTitle}
+                            </h1>
+                            <p className="text-base md:text-lg text-slate-500 mt-2 truncate" title={results.electionMatter}>
+                                {results.electionMatter}
+                            </p>
                         </div>
-                        <div className="flex flex-wrap gap-2 mt-4 sm:mt-0">
-                             <button 
+                        {/* This div will no longer shrink or wrap to a new line */}
+                        <div className="flex-shrink-0 mt-4 sm:mt-0 sm:ml-4">
+                            <button
                                 onClick={handleExportExcel}
                                 disabled={isExportingExcel}
                                 className="bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-green-800 transition-colors disabled:bg-green-400"
                             >
-                                {isExportingExcel ? <Loader2 className="animate-spin" size={16}/> : <FileSpreadsheet size={16} />}
+                                {isExportingExcel ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
                                 {isExportingExcel ? 'Exporting...' : 'Export to Excel'}
                             </button>
                         </div>
                     </div>
-                    
+
                     {summaryStats && (
                         <div className="mb-12">
                             <h2 className="text-xl font-bold text-slate-800 mb-4">Results Summary</h2>
@@ -240,7 +245,7 @@ const VoteResultPage = () => {
                                     </h2>
                                     <ResultBadge totals={res.totals} />
                                 </div>
-                                
+
                                 <div className="p-6">
                                     <div className="prose max-w-none text-slate-600 mb-4" dangerouslySetInnerHTML={{ __html: res.description }} />
                                     <VoteProgressBar totals={res.totals} />
@@ -258,6 +263,7 @@ const VoteResultPage = () => {
                                                         <th className="p-3 font-semibold text-slate-600 text-center">Agree (%)</th>
                                                         <th className="p-3 font-semibold text-slate-600 text-center">Disagree (%)</th>
                                                         <th className="p-3 font-semibold text-slate-600 text-center">Abstain (%)</th>
+                                                        <th className="p-3 font-semibold text-slate-600 text-center">Not Voted (%)</th>
                                                         <th className="p-3 font-semibold text-slate-600">Submit Time</th>
                                                     </tr>
                                                 </thead>
@@ -268,7 +274,18 @@ const VoteResultPage = () => {
                                                             <td className="p-3 text-center text-slate-700">{vote.choice === 'ACCEPT' ? vote.share.toFixed(2) : '-'}</td>
                                                             <td className="p-3 text-center text-slate-700">{vote.choice === 'REJECT' ? vote.share.toFixed(2) : '-'}</td>
                                                             <td className="p-3 text-center text-slate-700">{vote.choice === 'ABSTAIN' ? vote.share.toFixed(2) : '-'}</td>
+                                                            <td className="p-3 text-center text-slate-700">-</td>
                                                             <td className="p-3 text-slate-500">{formatDateTime(vote.votedAt)}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {res.nonVoters && res.nonVoters.map(nonVoter => (
+                                                        <tr key={nonVoter.candidateName}>
+                                                            <td className="p-3 font-medium text-slate-800">{nonVoter.candidateName}</td>
+                                                            <td className="p-3 text-center text-slate-700">-</td>
+                                                            <td className="p-3 text-center text-slate-700">-</td>
+                                                            <td className="p-3 text-center text-slate-700">-</td>
+                                                            <td className="p-3 text-center text-slate-700">{nonVoter.share.toFixed(2)}</td>
+                                                            <td className="p-3 text-slate-500">NA</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -278,6 +295,7 @@ const VoteResultPage = () => {
                                                         <td className="p-3 border-t-2 border-slate-300 text-center">{res.totals.accept.toFixed(2)}</td>
                                                         <td className="p-3 border-t-2 border-slate-300 text-center">{res.totals.reject.toFixed(2)}</td>
                                                         <td className="p-3 border-t-2 border-slate-300 text-center">{res.totals.abstain.toFixed(2)}</td>
+                                                        <td className="p-3 border-t-2 border-slate-300 text-center">{res.totals.notVoted ? res.totals.notVoted.toFixed(2) : '0.00'}</td>
                                                         <td className="p-3 border-t-2 border-slate-300"></td>
                                                     </tr>
                                                 </tfoot>
