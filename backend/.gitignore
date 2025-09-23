@@ -7,8 +7,6 @@ yarn-error.log*
 # docker-compose.yml
 # docker-compose*.yml
 # Environment variables
-.env
-.env.*
 
 # Logs
 logs/
