@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const jwt = require('jsonwebtoken');
 
-const { sendCandidateNotification, sendVotingReminder } = require('../utils/send_email');
+const { sendCandidateNotification, sendVotingReminder, delay } = require('../utils/send_email');
 
 // Enum for VoteStatus remains the same
 const VoteStatus = {
@@ -16,36 +16,30 @@ const createElection = async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized: User not found in request' });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-
+    
     const { Matter, title, resolutions, startTime, endTime, candidates } = req.body;
-
+    
     if (!resolutions || !Array.isArray(resolutions) || resolutions.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one resolution is required.' });
     }
-
-    const parsedStart = new Date(startTime);
-    const parsedEnd = new Date(endTime);
-
+    
     const election = await prisma.election.create({
       data: {
         Matter,
         title,
-        startTime: parsedStart.toISOString(), // store in UTC
-        endTime: parsedEnd.toISOString(),
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
         isPublished: true,
-        createdBy: {
-          connect: { id: userId }
-        },
+        createdBy: { connect: { id: userId } },
         candidates: {
-          create: candidates.map(candidate => ({
-            name: candidate.name,
-            email: candidate.email,
-            share: parseFloat(candidate.share)
+          create: candidates.map(c => ({
+            name: c.name,
+            email: c.email,
+            share: parseFloat(c.share)
           }))
         },
-        // --- NEW: Nested write to create all resolutions linked to this election ---
         resolutions: {
           create: resolutions.map(res => ({
             title: res.title,
@@ -56,43 +50,43 @@ const createElection = async (req, res) => {
           })),
         },
       },
-      include: {
-        candidates: true,
-        resolutions: true // Include the newly created resolutions in the response
-      }
+      include: { candidates: true, resolutions: true }
     });
 
-    // --- MODIFIED: Removed 'description' from the email payload ---
-    const emailPromises = election.candidates.map(candidate => {
-      // --- MODIFIED: Pass the full 'candidate' object ---
-      if (candidate.email) {
-        return sendCandidateNotification(candidate, {
-          id: election.id,
-          title: election.title,
-          startTime: election.startTime,
-          endTime: election.endTime
-        });
+    // Send emails with delay
+    (async () => {
+      console.log(`Starting to send ${election.candidates.length} notification emails...`);
+      for (let i = 0; i < election.candidates.length; i++) {
+        const candidate = election.candidates[i];
+        if (candidate.email) {
+          
+          try {
+            await sendCandidateNotification(candidate, {
+              id: election.id,
+              title: election.title,
+              startTime: election.startTime,
+              endTime: election.endTime
+            });
+            console.log(`Email sent to ${candidate.email}`);
+          } catch (emailError) {
+            console.error(`Failed to send email to ${candidate.email}:`, emailError);
+          }
+        }
       }
-    }).filter(Boolean);
-
-    Promise.all(emailPromises)
-      .then(() => console.log('All candidate emails sent successfully'))
-      .catch(error => console.error('Error sending emails:', error));
+      console.log('All notification emails have been processed.');
+    })();
 
     res.status(201).json({
       success: true,
       election,
-      message: `Election created successfully! Notification emails sent to ${emailPromises.length} candidates.`
+      message: `Election created! Notification emails are being sent to ${election.candidates.filter(c => c.email).length} candidates.`
     });
-
   } catch (error) {
     console.error('Create Election Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create election'
-    });
+    res.status(500).json({ success: false, message: 'Failed to create election' });
   }
 };
+
 
 const cancelElection = async (req, res) => {
   try {
@@ -414,56 +408,57 @@ const submitVote = async (req, res) => {
     }
 };
 
-
 const sendAllReminders = async (req, res) => {
-    try {
-        const { electionId } = req.params;
-
-        // 1. Fetch the election with all its candidates
-        const election = await prisma.election.findUnique({
-            where: { id: electionId },
-            include: { candidates: true },
-        });
-
-        if (!election) {
-            return res.status(404).json({ success: false, message: 'Election not found.' });
-        }
-
-        // 2. Find all votes that have been cast for this election's resolutions
-        const votes = await prisma.vote.findMany({
-            where: { resolution: { electionId: electionId } },
-            select: { candidateId: true }, // We only need to know who voted
-        });
-
-        // 3. Create a set of IDs for candidates who have already voted
-        const voters = new Set(votes.map(v => v.candidateId));
-
-        // 4. Filter the full candidate list to get only the non-voters
-        const nonVoters = election.candidates.filter(candidate => !voters.has(candidate.id));
-
-        if (nonVoters.length === 0) {
-            return res.status(200).json({ success: true, message: 'All candidates have already voted. No reminders sent.' });
-        }
-
-        // 5. Send a reminder email to each non-voter
-        const emailPromises = nonVoters.map(candidate => {
-            if (candidate.email) {
-                return sendVotingReminder(candidate, { 
-                    id: election.id,
-                    title: election.title,
-                    endTime: election.endTime,
-                });
-            }
-        }).filter(Boolean);
-
-        await Promise.all(emailPromises);
-
-        res.status(200).json({ success: true, message: `Reminders sent successfully to ${nonVoters.length} candidates.` });
-
-    } catch (error) {
-        console.error('Error sending reminders:', error);
-        res.status(500).json({ success: false, message: 'Failed to send reminders.' });
+  try {
+    const { electionId } = req.params;
+    
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      include: { candidates: true },
+    });
+    
+    if (!election) {
+      return res.status(404).json({ success: false, message: 'Election not found.' });
     }
+    
+    const votes = await prisma.vote.findMany({
+      where: { resolution: { electionId: electionId } },
+      select: { candidateId: true },
+    });
+    
+    const voters = new Set(votes.map(v => v.candidateId));
+    const nonVoters = election.candidates.filter(c => !voters.has(c.id));
+    
+    if (nonVoters.length === 0) {
+      return res.status(200).json({ success: true, message: 'All candidates have already voted. No reminders sent.' });
+    }
+
+    // Send reminders with delay BEFORE each email
+    (async () => {
+      console.log(`Starting to send ${nonVoters.length} reminder emails...`);
+      for (let i = 0; i < nonVoters.length; i++) {
+        const candidate = nonVoters[i];
+        if (candidate.email) {
+          try {
+            await sendVotingReminder(candidate, {
+              id: election.id,
+              title: election.title,
+              endTime: election.endTime,
+            });
+            console.log(`Reminder sent to ${candidate.email}`);
+          } catch (emailError) {
+            console.error(`Failed to send reminder to ${candidate.email}:`, emailError);
+          }
+        }
+      }
+      console.log('All reminder emails have been processed.');
+    })();
+
+    res.status(200).json({ success: true, message: `Reminders are being sent to ${nonVoters.length} candidates.` });
+  } catch (error) {
+    console.error('Error sending reminders:', error);
+    res.status(500).json({ success: false, message: 'Failed to send reminders.' });
+  }
 };
 
 const getElectionResults = async (req, res) => {
