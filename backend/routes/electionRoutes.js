@@ -12,7 +12,11 @@ const {
   getVoteDetails,
   submitVote,
   sendAllReminders,
-  getElectionResults
+  getElectionResults,
+  createPayment,
+  getUserPayments,
+  getPaymentStats,
+  getRefundDetails
 } = require('../controllers/electionController');
 
 const { authenticateToken } = require('../middleware/auth');
@@ -32,10 +36,14 @@ router.get('/candidates/:electionId', getCandidatesByElectionId);
 router.post('/:electionId/reminders', authenticateToken, sendAllReminders);
 router.post('/resend-email/:electionId', authenticateToken, resendCandidateEmail);
 router.get('/:electionId/results', authenticateToken, getElectionResults);
+router.post('/payments/create', authenticateToken, createPayment);
+router.get('/payments/history', authenticateToken, getUserPayments);
+router.get('/payments/stats', authenticateToken, getPaymentStats);
+router.get('/payments/refund', authenticateToken, getRefundDetails);
 
 // ✅ Put general routes AFTER specific routes
 router.get('/', authenticateToken, getAllElections);
-router.get('/:id', getElectionById);  // This should be LAST
+router.get('/:id', getElectionById);
 
 
 

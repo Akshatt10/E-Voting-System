@@ -353,17 +353,52 @@ const CreateVoting = () => {
 
   const handlePaymentSuccess = async () => {
     setShowPaymentUI(false);
-    const result = await createElectionAfterPayment();
-    if (result && result.success) {
-      setSuccess("Payment successful! Your election has been created.");
-      setTimeout(() => {
-        setForm({
-          Matter: "", title: "", resolutions: [{ title: "", description: "", options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" } }],
-          startTime: "", endTime: "", candidates: [{ name: "", email: "", share: "" }]
+    
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      
+      // First create the election
+      const result = await createElectionAfterPayment();
+      
+      if (result && result.success) {
+        // Then record the payment
+        const paymentResponse = await fetch('/api/elections/payments/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            electionId: result.election.id,
+            paymentMethod: 'card' // or get from payment UI state
+          })
         });
-        setCurrentStep(1);
-        setSuccess("");
-      }, 3000);
+        
+        const paymentData = await paymentResponse.json();
+        
+        if (paymentData.success) {
+          setSuccess("Payment successful! Your election has been created.");
+          setTimeout(() => {
+            setForm({
+              Matter: "", 
+              title: "", 
+              resolutions: [{ 
+                title: "", 
+                description: "", 
+                options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" } 
+              }],
+              startTime: "", 
+              endTime: "", 
+              candidates: [{ name: "", email: "", share: "" }]
+            });
+            setCurrentStep(1);
+            setSuccess("");
+          }, 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Payment recording error:', error);
+      setError('Election created but payment recording failed');
     }
   };
 

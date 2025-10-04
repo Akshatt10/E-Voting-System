@@ -1,133 +1,272 @@
-// src/pages/PaymentHistory.js
-
 import React, { useState, useEffect } from 'react';
-import { Loader2, AlertTriangle, Receipt, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CreditCard, Calendar, CheckCircle, AlertCircle, Loader2, Receipt } from 'lucide-react';
 
 const PaymentHistory = () => {
-    const [payments, setPayments] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [stats, setStats] = useState({ totalAmount: 0, totalPayments: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    useEffect(() => {
-        const fetchHistory = async () => {
-            const accessToken = localStorage.getItem("accessToken");
-            if (!accessToken) {
-                setError("Authentication failed. Please log in.");
-                setLoading(false);
-                return;
-            }
+  useEffect(() => {
+    fetchPaymentHistory();
+    fetchPaymentStats();
+  }, []);
 
-            try {
-                const res = await fetch('/api/payments/history', {
-                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.message || 'Failed to fetch payment history.');
-                }
-                setPayments(data.payments || []);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
+  const fetchPaymentHistory = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch('/api/elections/payments/history', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
 
-        fetchHistory();
-    }, []);
-
-    const formatAmount = (amount, currency) => {
-        // Assuming amount is in the smallest unit (e.g., paise)
-        const value = amount / 100;
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: currency.toUpperCase(),
-        }).format(value);
-    };
-
-    const StatusBadge = ({ status }) => {
-        const styles = {
-            SUCCESS: 'bg-green-100 text-green-800',
-            PENDING: 'bg-yellow-100 text-yellow-800',
-            FAILED: 'bg-red-100 text-red-800',
-        };
-        const icons = {
-            SUCCESS: <CheckCircle size={14} />,
-            PENDING: <Clock size={14} />,
-            FAILED: <XCircle size={14} />,
-        };
-        return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
-                {icons[status]}
-                {status}
-            </span>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-screen bg-slate-50">
-                <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-            </div>
-        );
+      const data = await response.json();
+      
+      if (data.success) {
+        setPayments(data.payments);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to load payment history');
+      console.error('Fetch payment history error:', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (error) {
-        return (
-            <div className="p-8">
-                <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg flex items-center">
-                    <AlertTriangle className="mr-3" size={24} />
-                    <span>{error}</span>
-                </div>
-            </div>
-        );
+  const fetchPaymentStats = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch('/api/elections/payments/stats', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Fetch payment stats error:', err);
     }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'SUCCESS':
+        return <CheckCircle className="text-green-500" size={20} />;
+      case 'FAILED':
+        return <AlertCircle className="text-red-500" size={20} />;
+      case 'PENDING':
+        return <Loader2 className="text-yellow-500 animate-spin" size={20} />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      SUCCESS: 'bg-green-100 text-green-800',
+      FAILED: 'bg-red-100 text-red-800',
+      PENDING: 'bg-yellow-100 text-yellow-800'
+    };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
-            <div className="max-w-7xl mx-auto">
-                <header className="mb-8">
-                    <h1 className="text-4xl font-bold text-slate-900">Payment History</h1>
-                    <p className="text-slate-600 mt-2 text-lg">A record of all your transactions on the platform.</p>
-                </header>
-
-                <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        {payments.length > 0 ? (
-                            <table className="min-w-full divide-y divide-slate-200">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Transaction ID</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">For Election</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-slate-200">
-                                    {payments.map(payment => (
-                                        <tr key={payment.id} className="hover:bg-slate-50/75 transition-colors">
-                                            <td className="px-6 py-4 font-mono text-sm text-slate-600">{payment.providerPaymentId}</td>
-                                            <td className="px-6 py-4 text-slate-600">{new Date(payment.createdAt).toLocaleDateString('en-GB')}</td>
-                                            <td className="px-6 py-4 font-semibold text-slate-900">{formatAmount(payment.amount, payment.currency)}</td>
-                                            <td className="px-6 py-4 text-slate-800">{payment.election?.title || 'N/A'}</td>
-                                            <td className="px-6 py-4"><StatusBadge status={payment.status} /></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="text-center text-slate-500 p-12">
-                                <Receipt className="mx-auto text-slate-400 mb-2" size={32} />
-                                <p className="font-semibold">No payment history found.</p>
-                                <p className="text-sm">Your transactions will appear here once you create an election.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
+        {status}
+      </span>
     );
+  };
+
+  const getRefundBadge = (refundStatus) => {
+    const styles = {
+      NOT_REFUNDED: 'bg-gray-100 text-gray-800',
+      REFUND_INITIATED: 'bg-yellow-100 text-yellow-800',
+      REFUNDED: 'bg-green-100 text-green-800',
+      REFUND_FAILED: 'bg-red-100 text-red-800'
+    };
+
+    const labels = {
+      NOT_REFUNDED: 'No Refund',
+      REFUND_INITIATED: 'Refund Initiated',
+      REFUNDED: 'Refunded',
+      REFUND_FAILED: 'Refund Failed'
+    };
+
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[refundStatus]}`}>
+        {labels[refundStatus]}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-indigo-600" size={48} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+            <Receipt className="text-indigo-600" size={40} />
+            Payment History
+          </h1>
+          <p className="text-gray-600">View all your election payment transactions</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">Total Payments</p>
+                <p className="text-3xl font-bold text-gray-800 mt-1">{stats.totalPayments}</p>
+              </div>
+              <div className="bg-indigo-100 p-4 rounded-full">
+                <CreditCard className="text-indigo-600" size={28} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">Total Amount Paid</p>
+                <p className="text-3xl font-bold text-gray-800 mt-1">
+                  ₹{stats.totalAmount.toFixed(2)}
+                </p>
+              </div>
+              <div className="bg-green-100 p-4 rounded-full">
+                <CheckCircle className="text-green-600" size={28} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+            <div className="flex items-center">
+              <AlertCircle className="text-red-500 mr-2" size={20} />
+              <span className="text-red-700 font-medium">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Table */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Transaction ID
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Election
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Payment Method
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Refund Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {payments.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      <Receipt className="mx-auto mb-4 text-gray-300" size={48} />
+                      <p className="text-lg font-medium">No payment history found</p>
+                      <p className="text-sm mt-1">Your payments will appear here once you create elections</p>
+                    </td>
+                  </tr>
+                ) : (
+                  payments.map((payment) => (
+                    <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          {getStatusIcon(payment.status)}
+                          <span className="ml-2 text-sm font-mono text-gray-700">
+                            {payment.transactionId}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {payment.electionTitle}
+                          </p>
+                          <p className="text-xs text-gray-500">{payment.electionMatter}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-bold text-gray-800">
+                          {payment.currency} {payment.amount.toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600 capitalize">
+                          {payment.paymentMethod || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(payment.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar size={14} className="mr-1" />
+                          {formatDate(payment.createdAt)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {getRefundBadge(payment.refundStatus)}
+                        {payment.refundedAt && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Refunded: {formatDate(payment.refundedAt)}
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default PaymentHistory;

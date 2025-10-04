@@ -91,28 +91,101 @@ const createElection = async (req, res) => {
 const cancelElection = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
 
-    const updatedElection = await prisma.election.update({
-      where: { id },
-      data: {
-        // isPublished: false, // You may or may not want this
-        status: 'CANCELLED' // Using the enum value directly
+    // Verify the election belongs to the user
+    const election = await prisma.election.findFirst({
+      where: { 
+        id,
+        createdById: userId 
       }
     });
 
-    // --- THIS IS THE KEY FIX ---
-    // Get the Socket.IO instance and emit an update to the creator's room
-    const io = req.app.get('socketio'); // Assumes you've attached io to the app instance
-    if (io && updatedElection.createdById) {
-        io.to(updatedElection.createdById).emit('electionUpdate', updatedElection);
-        console.log(`Sent 'CANCELLED' status update for election ${id} to user ${updatedElection.createdById}`);
+    if (!election) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Election not found or unauthorized' 
+      });
     }
-    // --- END OF FIX ---
 
-    res.json({ success: true, message: 'Election cancelled successfully', updated: updatedElection });
+    // Check if election can be cancelled
+    if (election.status === 'COMPLETED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel a completed election'
+      });
+    }
+
+    if (election.status === 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Election is already cancelled'
+      });
+    }
+
+    // Update election status
+    const updatedElection = await prisma.election.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED'
+      }
+    });
+
+    // Find the payment for this election
+    const payment = await prisma.payment.findFirst({
+      where: {
+        electionId: id,
+        userId: userId,
+        status: 'SUCCESS',
+        refundStatus: 'NOT_REFUNDED'
+      }
+    });
+
+    let refundData = null;
+
+    if (payment) {
+      // Process refund
+      const refundTransactionId = `REFUND${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      const updatedPayment = await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          refundStatus: 'REFUNDED', // In production, this would be REFUND_INITIATED first
+          refundedAt: new Date(),
+          refundTransactionId: refundTransactionId
+        }
+      });
+
+      refundData = {
+        amount: updatedPayment.amount,
+        currency: updatedPayment.currency,
+        refundTransactionId: refundTransactionId,
+        originalTransactionId: payment.transactionId
+      };
+
+      console.log(`Refund processed for election ${id}: ${refundTransactionId}`);
+    }
+
+    // Send Socket.IO update
+    const io = req.app.get('socketio');
+    if (io && updatedElection.createdById) {
+      io.to(updatedElection.createdById).emit('electionUpdate', updatedElection);
+      console.log(`Sent 'CANCELLED' status update for election ${id} to user ${updatedElection.createdById}`);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Election cancelled successfully', 
+      election: updatedElection,
+      refund: refundData 
+    });
+
   } catch (error) {
     console.error('Cancel Election Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to cancel election' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to cancel election' 
+    });
   }
 };
 
@@ -564,6 +637,181 @@ const getElectionResults = async (req, res) => {
     }
 };
 
+const createPayment = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { electionId, paymentMethod } = req.body;
+
+    if (!electionId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Election ID is required' 
+      });
+    }
+
+    // Verify the election exists and belongs to this user
+    const election = await prisma.election.findFirst({
+      where: {
+        id: electionId,
+        createdById: userId
+      }
+    });
+
+    if (!election) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Election not found or unauthorized' 
+      });
+    }
+
+    // Create payment record
+    const payment = await prisma.payment.create({
+      data: {
+        userId,
+        electionId,
+        amount: 500.00,
+        currency: 'INR',
+        status: 'SUCCESS',
+        paymentMethod: paymentMethod || 'card',
+        transactionId: `TXN${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      payment,
+      message: 'Payment recorded successfully'
+    });
+
+  } catch (error) {
+    console.error('Create Payment Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to record payment' 
+    });
+  }
+};
+
+const getUserPayments = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const payments = await prisma.payment.findMany({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstname: true,
+            lastname: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Get election titles for each payment
+    const paymentsWithElections = await Promise.all(
+      payments.map(async (payment) => {
+        const election = await prisma.election.findUnique({
+          where: { id: payment.electionId },
+          select: { title: true, Matter: true }
+        });
+        
+        return {
+          ...payment,
+          electionTitle: election?.title || 'Deleted Election',
+          electionMatter: election?.Matter || 'N/A'
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      payments: paymentsWithElections
+    });
+
+  } catch (error) {
+    console.error('Get User Payments Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch payment history' 
+    });
+  }
+};
+
+const getPaymentStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const stats = await prisma.payment.aggregate({
+      where: { userId },
+      _sum: { amount: true },
+      _count: true
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalAmount: stats._sum.amount || 0,
+        totalPayments: stats._count || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Get Payment Stats Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch payment stats' 
+    });
+  }
+};
+
+const getRefundDetails = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const refunds = await prisma.payment.findMany({
+      where: {
+        userId,
+        refundStatus: {
+          in: ['REFUND_INITIATED', 'REFUNDED']
+        }
+      },
+      orderBy: { refundedAt: 'desc' }
+    });
+
+    // Get election details for each refund
+    const refundsWithDetails = await Promise.all(
+      refunds.map(async (refund) => {
+        const election = await prisma.election.findUnique({
+          where: { id: refund.electionId },
+          select: { title: true, Matter: true, status: true }
+        });
+        
+        return {
+          ...refund,
+          electionTitle: election?.title || 'Deleted Election',
+          electionMatter: election?.Matter || 'N/A',
+          electionStatus: election?.status
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      refunds: refundsWithDetails
+    });
+
+  } catch (error) {
+    console.error('Get Refund Details Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch refund details' 
+    });
+  }
+};
+
 
 
 module.exports = {
@@ -578,5 +826,9 @@ module.exports = {
   getVoteDetails,
   submitVote,
   sendAllReminders,
-  getElectionResults
+  getElectionResults,
+  createPayment,
+  getUserPayments,
+  getPaymentStats,
+  getRefundDetails
 };

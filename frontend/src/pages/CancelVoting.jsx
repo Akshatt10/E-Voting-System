@@ -57,10 +57,19 @@ const CancelVoting = () => {
         },
       });
       const data = await res.json();
+      
       if (res.ok) {
-        setSuccess("Election cancelled successfully!");
+        // Check if refund was processed
+        if (data.refund) {
+          setSuccess(
+            `Election cancelled successfully! Refund of ${data.refund.currency} ${data.refund.amount} has been initiated. Refund Transaction ID: ${data.refund.refundTransactionId}`
+          );
+        } else {
+          setSuccess("Election cancelled successfully! No payment found to refund.");
+        }
+        
         setElections(elections.filter((el) => el.id !== selectedId));
-        setTimeout(() => navigate("/vote-status"), 2000);
+        setTimeout(() => navigate("/vote-status"), 4000); // Increased timeout to read message
       } else {
         setError(data.message || "Failed to cancel election.");
       }

@@ -19,10 +19,10 @@ model User {
   verified     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
   elections     Election[]
   auditLogs     AuditLog[]
   refreshTokens RefreshToken[]
+  payments      Payment[]
 }
 
 model RefreshToken {
@@ -104,6 +104,39 @@ model AuditLog {
   timestamp DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  electionId    String
+  amount        Float    @default(500.00)
+  currency      String   @default("INR")
+  status        PaymentStatus @default(SUCCESS)
+  paymentMethod String?
+  transactionId String?  @unique
+  refundStatus  RefundStatus @default(NOT_REFUNDED)
+  refundedAt    DateTime?
+  refundTransactionId String?
+  createdAt     DateTime @default(now())
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([electionId])
+}
+
+enum PaymentStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum RefundStatus {
+  NOT_REFUNDED
+  REFUND_INITIATED
+  REFUNDED
+  REFUND_FAILED
 }
 
 model OTP {
