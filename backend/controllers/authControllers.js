@@ -13,115 +13,176 @@ const jwt = require('jsonwebtoken');
 const prisma = new PrismaClient();
 
 const register = async (req, res) => {
-    try {
-        const { email, IBBI, password, firstName, lastName, phone } = req.body;
+  try {
+    const { email, password, firstname, lastname, phone, IBBI } = req.body;
 
-
-        const existingUserByEmail = await prisma.user.findUnique({
-            where: { email },
-        });
-
-        if (existingUserByEmail) {
-            return res.status(409).json({ success: false, message: 'An account with this email address already exists.' });
-        }
-        
-        const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-        let user;
-        try {
-            user = await prisma.user.create({
-                data: {
-                    email,
-                    IBBI: IBBI,
-                    firstname: firstName,
-                    lastname: lastName,
-                    phone: phone,
-                    passwordHash: hashedPassword,
-                    role: 'VOTER',
-                },
-            });
-        } catch (error) {
-            // Check if the error is a Prisma unique constraint violation
-            if (error.code === 'P2002') {
-                const field = error.meta.target[0];
-                return res.status(409).json({ success: false, message: `An account with this ${field} already exists.` });
-            }
-
-            throw error;
-        }
-
-        const accessToken = generateAccessToken({ userId: user.id, email: user.email });
-        const refreshToken = generateRefreshToken();
-
-        await storeRefreshToken(user.id, refreshToken);
-
-        res.status(201).json({
-            success: true,
-            message: 'User registered successfully',
-            data: {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    IBBI: user.IBBI,
-                    firstName: user.firstname,
-                    lastName: user.lastname,
-                    phone: user.phone,
-                    createdAt: user.createdAt,
-                },
-                accessToken,
-                refreshToken,
-            },
-        });
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and password are required' 
+      });
     }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Email already registered' 
+      });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user with PENDING status
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        firstname,
+        lastname,
+        phone,
+        IBBI,
+        role: 'VOTER',
+        verified: true,
+        accountStatus: 'PENDING' // Set to pending by default
+      }
+    });
+
+    // Don't create tokens yet - user needs approval first
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Your account is pending admin approval. You will be notified once approved.',
+      user: {
+        id: user.id,
+        email: user.email,
+        accountStatus: user.accountStatus
+      }
+    });
+
+  } catch (error) {
+    console.error('Signup Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Registration failed' 
+    });
+  }
 };
 
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and password are required' 
+      });
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email }
     });
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
 
-    if (!user.verified) {
-      return res.status(403).json({ success: false, message: 'Account not verified' });
+    // Check account status
+    if (user.accountStatus === 'PENDING') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending admin approval. Please wait for confirmation.',
+        accountStatus: 'PENDING'
+      });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isValidPassword) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (user.accountStatus === 'REJECTED') {
+      return res.status(403).json({
+        success: false,
+        message: `Your account registration was rejected. Reason: ${user.rejectionReason || 'Not specified'}`,
+        accountStatus: 'REJECTED'
+      });
     }
 
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email });
-    const refreshToken = generateRefreshToken();
+    if (user.accountStatus === 'SUSPENDED') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact support.',
+        accountStatus: 'SUSPENDED'
+      });
+    }
 
-    await storeRefreshToken(user.id, refreshToken);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
+    }
+
+    // Only proceed if account is APPROVED
+    if (user.accountStatus !== 'APPROVED') {
+      return res.status(403).json({
+        success: false,
+        message: 'Account access denied',
+        accountStatus: user.accountStatus
+      });
+    }
+
+    // Generate tokens
+    const accessToken = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt
+      }
+    });
 
     res.json({
       success: true,
-      message: 'Login successful',
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.firstname + ' ' + user.lastname,
-        },
-        accessToken,
-        refreshToken,
-      },
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        role: user.role,
+        accountStatus: user.accountStatus
+      }
     });
+
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error('Login Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Login failed' 
+    });
   }
 };
 
@@ -243,8 +304,8 @@ const getProfile = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstname,
-        lastName: user.lastname
+        firstname: user.firstname,
+        lastname: user.lastname
       }
     }
   });
@@ -254,13 +315,13 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { firstName, lastName, phone } = req.body;
+    const { firstname, lastname, phone } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        firstname: firstName,
-        lastname: lastName,
+        firstname: firstname,
+        lastname: lastname,
         phone: phone
       }
     });
@@ -272,8 +333,8 @@ const updateProfile = async (req, res) => {
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
-          firstName: updatedUser.firstname,
-          lastName: updatedUser.lastname,
+          firstname: updatedUser.firstname,
+          lastname: updatedUser.lastname,
           phone: updatedUser.phone
         }
       }

@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FaVoteYea, FaCalendarAlt, FaTrashAlt, FaCheckCircle, FaUserCircle, FaBars, FaTimes, FaTachometerAlt } from 'react-icons/fa';
 import { LogOut } from 'lucide-react'; 
+import api from '../utils/interceptor';
+
 const DashboardLayout = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -19,21 +21,71 @@ const DashboardLayout = () => {
     navigate('/');
   };
 
-  useEffect(() => {
+  // useEffect(() => {
+  //   const fetchUser = async () => {
+  //     const token = localStorage.getItem('accessToken');
+  //     if (!token) return setError('No token found');
+
+  //     try {
+  //       const res = await fetch('/api/auth/current-user', {
+  //         headers: { 'Authorization': `Bearer ${token}` }
+  //       });
+  //       if (!res.ok) throw new Error('Failed to fetch user data');
+  //       const data = await res.json();
+  //       setUser(data);
+  //     } catch (err) {
+  //       console.error(err);
+  //       setError('Error loading user profile');
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchUser();
+  // }, []);
+
+//   useEffect(() => {
+//   const fetchUser = async () => {
+//     const token = localStorage.getItem('accessToken');
+//     if (!token) return setError('No token found');
+    
+//     try {
+//       const res = await api.get('/auth/current-user');
+//       setUser(res.data);
+//     } catch (err) {
+//       console.error(err);
+//       setError('Error loading user profile');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+  
+//   fetchUser();
+// }, []);
+useEffect(() => {
+    // 1️⃣ Load from localStorage immediately (for instant UI)
+    const firstname = localStorage.getItem("firstname");
+    const lastname = localStorage.getItem("lastname");
+    const localUser = firstname || lastname ? { firstname, lastname } : null;
+    if (localUser) setUser(localUser);
+
+    // 2️⃣ Then verify user from backend using the token
     const fetchUser = async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return setError('No token found');
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        setError("No token found");
+        setLoading(false);
+        return;
+      }
 
       try {
-        const res = await fetch('/api/auth/current-user', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const res = await api.get("/auth/current-user", {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error('Failed to fetch user data');
-        const data = await res.json();
-        setUser(data);
+        setUser(res.data.user || res.data); // adjust based on backend response
       } catch (err) {
-        console.error(err);
-        setError('Error loading user profile');
+        console.error("Error fetching user:", err);
+        setError("Error loading user profile");
       } finally {
         setLoading(false);
       }
@@ -41,6 +93,7 @@ const DashboardLayout = () => {
 
     fetchUser();
   }, []);
+
 
   const navItems = [
     {
@@ -199,7 +252,7 @@ const DashboardLayout = () => {
                   Welcome back!
                 </div>
                 <div className="text-sm text-gray-600">
-                  {user ? `${user.firstname} ${user.lastname}` : 'Loading...'}
+                  {user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : 'Loading...'}
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, AlertTriangle, FileText, ArrowLeft, Download, FileSpreadsheet, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import api from '../utils/interceptor';
 
 // --- Helper component for the outcome badge ---
 const ResultBadge = ({ totals, totalCoCShares }) => {
@@ -56,32 +57,56 @@ const VoteResultPage = () => {
     const [expandedRows, setExpandedRows] = useState({});
     const [isExportingExcel, setIsExportingExcel] = useState(false);
 
+    // useEffect(() => {
+    //     const fetchResults = async () => {
+    //         const accessToken = localStorage.getItem("accessToken");
+    //         if (!accessToken) {
+    //             setError("Authentication failed. Please log in.");
+    //             setLoading(false);
+    //             return;
+    //         }
+    //         try {
+    //             const res = await fetch(`/api/elections/${electionId}/results`, {
+    //                 headers: { 'Authorization': `Bearer ${accessToken}` },
+    //             });
+    //             const data = await res.json();
+    //             if (!res.ok) {
+    //                 throw new Error(data.message || 'Failed to fetch results.');
+    //             }
+    //             setResults(data.results);
+    //         } catch (err) {
+    //             setError(err.message);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchResults();
+    // }, [electionId]);
     useEffect(() => {
         const fetchResults = async () => {
             const accessToken = localStorage.getItem("accessToken");
             if (!accessToken) {
-                setError("Authentication failed. Please log in.");
-                setLoading(false);
-                return;
+            setError("Authentication failed. Please log in.");
+            setLoading(false);
+            return;
             }
+
             try {
-                const res = await fetch(`/api/elections/${electionId}/results`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.message || 'Failed to fetch results.');
-                }
-                setResults(data.results);
+            const res = await api.get(`/elections/${electionId}/results`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+
+            setResults(res.data.results);
             } catch (err) {
-                setError(err.message);
+            setError(err.response?.data?.message || err.message || "Failed to fetch results.");
             } finally {
-                setLoading(false);
+            setLoading(false);
             }
         };
 
         fetchResults();
-    }, [electionId]);
+}, [electionId]);
 
     const handleExportExcel = () => {
         setIsExportingExcel(true);

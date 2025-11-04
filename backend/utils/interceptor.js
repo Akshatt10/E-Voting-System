@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api', // Your backend's base URL
+  baseURL: 'https://a118d7ee0dab.ngrok-free.app/api', // Your backend's base URL
 });
 
 // Request Interceptor: Attaches the token to every request

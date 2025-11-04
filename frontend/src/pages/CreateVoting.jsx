@@ -4,6 +4,7 @@ import {
   Underline, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, CreditCard, Landmark,
   Smartphone, Shield, Loader2
 } from "lucide-react";
+import api from '../utils/interceptor';
 
 // RichTextEditor component (assuming it's in the same file or imported)
 const RichTextEditor = ({ value, onChange, placeholder = "Provide details for this resolution..." }) => {
@@ -325,26 +326,18 @@ const CreateVoting = () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
       const candidatesToSend = form.candidates.map(c => ({ ...c, share: parseFloat(c.share) }));
-      const response = await fetch('/api/elections/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          Matter: form.Matter,
-          title: form.title,
-          resolutions: form.resolutions,
-          startTime: form.startTime,
-          endTime: form.endTime,
-          candidates: candidatesToSend
-        })
+      const response = await api.post('/elections/create', {
+        Matter: form.Matter,
+        title: form.title,
+        resolutions: form.resolutions,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        candidates: candidatesToSend
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to create election.");
-      return data;
+
+      return response.data;
     } catch (err) {
-      setError(err.message || "Network error.");
+      setError(err.response?.data?.message || err.message || "Network error.");
       return null;
     } finally {
       setLoading(false);
@@ -353,42 +346,37 @@ const CreateVoting = () => {
 
   const handlePaymentSuccess = async () => {
     setShowPaymentUI(false);
-    
+
     try {
       const accessToken = localStorage.getItem('accessToken');
-      
+
       // First create the election
       const result = await createElectionAfterPayment();
-      
+
       if (result && result.success) {
         // Then record the payment
-        const paymentResponse = await fetch('/api/elections/payments/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            electionId: result.election.id,
-            paymentMethod: 'card' // or get from payment UI state
-          })
+        const paymentResponse = await api.post('/elections/payments/create', {
+          electionId: result.election.id,
+          paymentMethod: 'card' // or get from payment UI state
         });
-        
-        const paymentData = await paymentResponse.json();
-        
+
+        console.log("Payment response:", paymentResponse.data);
+
+        const paymentData = await paymentResponse.data;
+
         if (paymentData.success) {
           setSuccess("Payment successful! Your election has been created.");
           setTimeout(() => {
             setForm({
-              Matter: "", 
-              title: "", 
-              resolutions: [{ 
-                title: "", 
-                description: "", 
-                options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" } 
+              Matter: "",
+              title: "",
+              resolutions: [{
+                title: "",
+                description: "",
+                options: { agree: "Agree", disagree: "Disagree", abstain: "Abstain from voting" }
               }],
-              startTime: "", 
-              endTime: "", 
+              startTime: "",
+              endTime: "",
               candidates: [{ name: "", email: "", share: "" }]
             });
             setCurrentStep(1);

@@ -5,6 +5,7 @@ import {
   CheckCircle, XCircle, Play, CalendarClock, AlertCircle,
   Mail, Phone, Globe, Download, Copy, Loader, Trash2
 } from "lucide-react";
+import api from '../utils/interceptor';
 
 const ElectionDetails = ({ electionId, onBack }) => {
   const [election, setElection] = useState(null);
@@ -17,50 +18,87 @@ const ElectionDetails = ({ electionId, onBack }) => {
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const contentRef = useRef(null);
 
-  useEffect(() => {
+  // useEffect(() => {
 
-    const fetchElectionDetails = async () => {
-      setLoading(true);
-      setError("");
-      const accessToken = localStorage.getItem("accessToken");
+  //   const fetchElectionDetails = async () => {
+  //     setLoading(true);
+  //     setError("");
+  //     const accessToken = localStorage.getItem("accessToken");
 
-      if (!accessToken) {
-        setError("You are not logged in. Please log in.");
-        setLoading(false);
-        return;
+  //     if (!accessToken) {
+  //       setError("You are not logged in. Please log in.");
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     try {
+  //       const res = await fetch(`/api/elections/${electionId}`, {
+  //         headers: { Authorization: "Bearer " + accessToken },
+  //       });
+
+  //       if (!res.ok) {
+  //         const errorData = await res.json();
+  //         throw new Error(errorData.message || "Failed to fetch election details");
+  //       }
+
+  //       const data = await res.json();
+  //       if (data.success && data.election) {
+  //         setElection(data.election);
+  //         // Populate candidates from the same API call
+  //         setCandidates(data.election.candidates || []);
+  //       } else {
+  //         throw new Error("Election data not found in response.");
+  //       }
+
+  //     } catch (err) {
+  //       console.error("Error fetching election details:", err);
+  //       setError(err.message);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchElectionDetails();
+  //   const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+  //   return () => clearInterval(interval);
+  // }, [electionId]);
+useEffect(() => {
+  const fetchElectionDetails = async () => {
+    setLoading(true);
+    setError("");
+    const accessToken = localStorage.getItem("accessToken");
+
+    if (!accessToken) {
+      setError("You are not logged in. Please log in.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await api.get(`/elections/${electionId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      const data = res.data;
+      if (data.success && data.election) {
+        setElection(data.election);
+        setCandidates(data.election.candidates || []);
+      } else {
+        throw new Error("Election data not found in response.");
       }
+    } catch (err) {
+      console.error("Error fetching election details:", err);
+      setError(err.response?.data?.message || err.message || "Failed to fetch election details");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try {
-        const res = await fetch(`/api/elections/${electionId}`, {
-          headers: { Authorization: "Bearer " + accessToken },
-        });
+  fetchElectionDetails();
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to fetch election details");
-        }
-
-        const data = await res.json();
-        if (data.success && data.election) {
-          setElection(data.election);
-          // Populate candidates from the same API call
-          setCandidates(data.election.candidates || []);
-        } else {
-          throw new Error("Election data not found in response.");
-        }
-
-      } catch (err) {
-        console.error("Error fetching election details:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchElectionDetails();
-    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, [electionId]);
+  const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+  return () => clearInterval(interval);
+}, [electionId]);
 
   // const handleDownloadReport = async () => {
   //   setIsDownloading(true);
@@ -90,52 +128,99 @@ const ElectionDetails = ({ electionId, onBack }) => {
   //   }
   // };
 
-  const handleSendReminder = async () => {
-    if (!window.confirm("Are you sure you want to send a voting reminder to all candidates who haven't voted?")) {
-      return;
-    }
-    setIsSubmitting(true);
-    const accessToken = localStorage.getItem("accessToken");
-    try {
+  // const handleSendReminder = async () => {
+  //   if (!window.confirm("Are you sure you want to send a voting reminder to all candidates who haven't voted?")) {
+  //     return;
+  //   }
+  //   setIsSubmitting(true);
+  //   const accessToken = localStorage.getItem("accessToken");
+  //   try {
     
-      const response = await fetch(`/api/elections/${electionId}/reminders`, {
-        method: 'POST',
-        headers: { 'Authorization': "Bearer " + accessToken },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to send reminders.");
-      alert(data.message || "Reminders sent successfully!");
-    } catch (error) {
-      console.error("Error sending reminder:", error);
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  //     const response = await fetch(`/api/elections/${electionId}/reminders`, {
+  //       method: 'POST',
+  //       headers: { 'Authorization': "Bearer " + accessToken },
+  //     });
+  //     const data = await response.json();
+  //     if (!response.ok) throw new Error(data.message || "Failed to send reminders.");
+  //     alert(data.message || "Reminders sent successfully!");
+  //   } catch (error) {
+  //     console.error("Error sending reminder:", error);
+  //     alert(`Error: ${error.message}`);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
-  const handleCancelElection = async () => {
-    if (!window.confirm("Are you sure you want to cancel this election? This action cannot be undone.")) {
-      return;
-    }
-    setIsSubmitting(true);
-    const accessToken = localStorage.getItem("accessToken");
-    try {
-      const response = await fetch(`/api/elections/cancel/${electionId}`, {
-        method: 'POST', // Make sure your route accepts POST
-        headers: { 'Authorization': "Bearer " + accessToken },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to cancel election.");
-      alert("Election cancelled successfully!");
-      onBack(); // Go back to the previous page
-    } catch (error) {
-      console.error("Error canceling election:", error);
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // const handleCancelElection = async () => {
+  //   if (!window.confirm("Are you sure you want to cancel this election? This action cannot be undone.")) {
+  //     return;
+  //   }
+  //   setIsSubmitting(true);
+  //   const accessToken = localStorage.getItem("accessToken");
+  //   try {
+  //     const response = await fetch(`/api/elections/cancel/${electionId}`, {
+  //       method: 'POST', // Make sure your route accepts POST
+  //       headers: { 'Authorization': "Bearer " + accessToken },
+  //     });
+  //     const data = await response.json();
+  //     if (!response.ok) throw new Error(data.message || "Failed to cancel election.");
+  //     alert("Election cancelled successfully!");
+  //     onBack(); // Go back to the previous page
+  //   } catch (error) {
+  //     console.error("Error canceling election:", error);
+  //     alert(`Error: ${error.message}`);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
+
+  const handleSendReminder = async () => {
+  if (!window.confirm("Are you sure you want to send a voting reminder to all candidates who haven't voted?")) {
+    return;
+  }
+
+  setIsSubmitting(true);
+  const accessToken = localStorage.getItem("accessToken");
+
+  try {
+    const res = await api.post(`/elections/${electionId}/reminders`, {}, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    alert(res.data.message || "Reminders sent successfully!");
+  } catch (error) {
+    console.error("Error sending reminder:", error);
+    alert(`Error: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+
+// ✅ Handle cancel election using api.post
+const handleCancelElection = async () => {
+  if (!window.confirm("Are you sure you want to cancel this election? This action cannot be undone.")) {
+    return;
+  }
+
+  setIsSubmitting(true);
+  const accessToken = localStorage.getItem("accessToken");
+
+  try {
+    const res = await api.post(`/elections/cancel/${electionId}`, {}, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    alert(res.data.message || "Election cancelled successfully!");
+    onBack();
+  } catch (error) {
+    console.error("Error canceling election:", error);
+    alert(`Error: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const getElectionStatus = (startTime, endTime, currentStatus) => {
     const now = currentTime;

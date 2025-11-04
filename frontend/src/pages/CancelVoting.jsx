@@ -8,6 +8,7 @@ import {
   Calendar,
   Clock,
 } from "lucide-react";
+import api from "../utils/interceptor";
 
 const CancelVoting = () => {
   const [elections, setElections] = useState([]);
@@ -21,15 +22,10 @@ const CancelVoting = () => {
   useEffect(() => {
     const fetchElections = async () => {
       try {
-        const res = await fetch("/api/elections/user-elections", {
-          headers: {
-            Authorization: "Bearer " + localStorage.getItem("accessToken"),
-          },
-        });
-        const data = await res.json();
-        if (res.ok) setElections(data.elections || []);
-        else setElections([]);
-      } catch {
+        const res = await api.get("/elections/user-elections");
+        setElections(res.data.elections || []);
+      } catch (err) {
+        console.error("Error fetching elections:", err);
         setElections([]);
       }
     };
@@ -50,13 +46,12 @@ const CancelVoting = () => {
     setSuccess("");
 
     try {
-      const res = await fetch(`/api/elections/cancel/${selectedId}`, {
-        method: "POST",
+      const res = await api.post(`/elections/cancel/${selectedId}`, {}, {
         headers: {
           Authorization: "Bearer " + localStorage.getItem("accessToken"),
         },
       });
-      const data = await res.json();
+      const data = res.data;
       
       if (res.ok) {
         // Check if refund was processed

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ShieldAlert, ShieldCheck, ThumbsUp, ThumbsDown, CircleSlash, Send, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import api from '../utils/interceptor';
 
 // Helper component for the countdown timer
 const CountdownTimer = ({ endTime }) => {
@@ -58,42 +59,101 @@ const VotePage = () => {
     const [activeResolutionId, setActiveResolutionId] = useState(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+    // useEffect(() => {
+    //     if (!token) {
+    //         setError("No voting token provided. This link is invalid.");
+    //         setLoading(false);
+    //         return;
+    //     }
+
+    //     const fetchVoteDetails = async () => {
+    //         try {
+    //             const res = await fetch(`/api/elections/vote/details/${token}`);
+    //             const data = await res.json();
+    //             if (!res.ok) {
+    //                 throw new Error(data.message || "An unknown error occurred.");
+    //             }
+    //             setElection(data.election);
+    //             if (data.election?.resolutions?.length > 0) {
+    //                 setActiveResolutionId(data.election.resolutions[0].id);
+    //             }
+    //         } catch (err) {
+    //             setError(err.message);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchVoteDetails();
+    // }, [token]);
+
+    // const handleVoteChange = (resolutionId, choice) => {
+    //     setVotes(prev => ({ ...prev, [resolutionId]: choice }));
+    // };
+
+    // const handleSubmit = () => {
+    //     if (Object.keys(votes).length !== election.resolutions.length) {
+    //         alert("Please cast your vote for all resolutions before submitting.");
+    //         return;
+    //     }
+    //     setShowConfirmModal(true);
+    // };
+
+    // const handleConfirmSubmit = async () => {
+    //     setShowConfirmModal(false);
+    //     setIsSubmitting(true);
+    //     setError(null);
+
+    //     try {
+    //         const res = await fetch(`/api/elections/vote/submit`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ token, votes }),
+    //         });
+    //         const data = await res.json();
+    //         if (!res.ok) {
+    //             throw new Error(data.message || 'Failed to submit vote.');
+    //         }
+    //         setVoteSubmitted(true);
+    //     } catch (err) {
+    //         setError(err.message);
+    //     } finally {
+    //         setIsSubmitting(false);
+    //     }
+    // };
     useEffect(() => {
         if (!token) {
-            setError("No voting token provided. This link is invalid.");
-            setLoading(false);
-            return;
+        setError('No voting token provided. This link is invalid.');
+        setLoading(false);
+        return;
         }
 
         const fetchVoteDetails = async () => {
-            try {
-                const res = await fetch(`/api/elections/vote/details/${token}`);
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.message || "An unknown error occurred.");
-                }
-                setElection(data.election);
-                if (data.election?.resolutions?.length > 0) {
-                    setActiveResolutionId(data.election.resolutions[0].id);
-                }
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
+        try {
+            const { data } = await api.get(`/elections/vote/details/${token}`);
+            setElection(data.election);
+
+            if (data.election?.resolutions?.length > 0) {
+            setActiveResolutionId(data.election.resolutions[0].id);
             }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to load voting details.');
+        } finally {
+            setLoading(false);
+        }
         };
 
         fetchVoteDetails();
     }, [token]);
 
     const handleVoteChange = (resolutionId, choice) => {
-        setVotes(prev => ({ ...prev, [resolutionId]: choice }));
+        setVotes((prev) => ({ ...prev, [resolutionId]: choice }));
     };
 
     const handleSubmit = () => {
         if (Object.keys(votes).length !== election.resolutions.length) {
-            alert("Please cast your vote for all resolutions before submitting.");
-            return;
+        alert('Please cast your vote for all resolutions before submitting.');
+        return;
         }
         setShowConfirmModal(true);
     };
@@ -104,23 +164,14 @@ const VotePage = () => {
         setError(null);
 
         try {
-            const res = await fetch(`/api/elections/vote/submit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, votes }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to submit vote.');
-            }
-            setVoteSubmitted(true);
+        await api.post('/elections/vote/submit', { token, votes });
+        setVoteSubmitted(true);
         } catch (err) {
-            setError(err.message);
+        setError(err.response?.data?.message || 'Failed to submit vote.');
         } finally {
-            setIsSubmitting(false);
+        setIsSubmitting(false);
         }
     };
-    
     // Loading, Error, and Submitted states are unchanged
     if (loading) {
         return (

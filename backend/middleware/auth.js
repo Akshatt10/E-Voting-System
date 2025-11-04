@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const authenticateToken = async (req, res, next) => {
+const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer <TOKEN>
 
@@ -13,48 +13,31 @@ const authenticateToken = async (req, res, next) => {
     });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId || decoded.id;
-    const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      IBBI: true,
-      firstname: true,
-      lastname: true,
-      phone: true,
-      role: true,
-      verified: true,
-      createdAt: true,
-      updatedAt: true
-    }
-  });
-
-    if (!user) {
-      return res.status(401).json({ 
+  jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ 
         success: false, 
-        message: 'User not found' 
+        message: 'Invalid or expired token' 
+      });
+    }
+
+    // Check user's current account status
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true, accountStatus: true }
+    });
+
+    if (!user || user.accountStatus !== 'APPROVED') {
+      return res.status(403).json({
+        success: false,
+        message: 'Account access denied',
+        accountStatus: user?.accountStatus
       });
     }
 
     req.user = user;
     next();
-
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token expired' 
-      });
-    }
-
-    return res.status(403).json({ 
-      success: false, 
-      message: 'Invalid token' 
-    });
-  }
+  });
 };
 
 module.exports = { authenticateToken };

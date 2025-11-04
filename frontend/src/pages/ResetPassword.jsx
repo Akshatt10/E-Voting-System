@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import api from '../utils/interceptor';
 
 const ResetPassword = () => {
     const { token } = useParams();
@@ -14,30 +15,30 @@ const ResetPassword = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (newPassword !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
+        setError("Passwords do not match.");
+        return;
         }
+
         setLoading(true);
         setError('');
         setSuccess('');
 
         try {
-            const res = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message);
-            }
-            setSuccess(data.message + " Redirecting to login...");
-            setTimeout(() => navigate('/login'), 3000);
+        // ✅ Use interceptor instead of fetch
+        const { data } = await api.post('/auth/reset-password', {
+            token,
+            newPassword,
+        });
+
+        setSuccess(data.message + " Redirecting to login...");
+        setTimeout(() => navigate('/login'), 3000);
         } catch (err) {
-            setError(err.message);
+        console.error("Reset password error:", err);
+        setError(err.response?.data?.message || "Something went wrong. Try again.");
         } finally {
-            setLoading(false);
+        setLoading(false);
         }
     };
 

@@ -13,7 +13,7 @@ const ForgotPassword = () => {
         setMessage('');
 
         try {
-            const res = await fetch('http://localhost:3000/api/auth/request-password-reset', {
+            const res = await fetch('https://a118d7ee0dab.ngrok-free.app/api/auth/request-password-reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),

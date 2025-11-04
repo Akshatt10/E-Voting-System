@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, AlertCircle, LogIn, CheckCircle } from 'lucide-react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import api from '../utils/interceptor';
+
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -37,7 +39,7 @@ const Login = () => {
         setSuccess('');
 
         try {
-            const response = await fetch('http://localhost:3000/api/auth/login', {
+            const response = await fetch('https://a118d7ee0dab.ngrok-free.app/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
@@ -45,16 +47,26 @@ const Login = () => {
 
             const data = await response.json();
 
-            if (response.ok) {
-                if (data.data && data.data.accessToken) {
-                    localStorage.setItem('accessToken', data.data.accessToken);
-                    navigate('/dashboard');
-                } else {
-                    setError('Login successful, but no access token received.');
-                }
+            if (response.ok && data.success) {
+
+                localStorage.setItem('accessToken', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken);
+                localStorage.setItem('userRole', data.user.role);
+                localStorage.setItem('userId', data.user.id);
+                localStorage.setItem('userEmail', data.user.email);
+                localStorage.setItem('firstname', data.user.firstname || '');
+                localStorage.setItem('lastname', data.user.lastname || '');
+
+
+                // Optional: immediately trigger UI refresh events
+                window.dispatchEvent(new Event('storage'));
+
+                // Navigate to dashboard
+                navigate('/dashboard');
             } else {
                 setError(data.message || 'Login failed. Please check your credentials.');
             }
+
         } catch (err) {
             setError('Network error. Could not connect to the server.');
         } finally {

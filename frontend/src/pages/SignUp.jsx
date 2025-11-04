@@ -6,8 +6,8 @@ import HomeImg from '../assets/Home.png'; // Import the image for the left panel
 const Signup = () => {
     const [formData, setFormData] = useState({
         IBBI: '',
-        firstName: '',
-        lastName: '',
+        firstname: '',
+        lastname: '',
         email: '',
         phone: '',
         password: '',
@@ -40,7 +40,7 @@ const Signup = () => {
         setFormErrors({});
 
         try {
-            const res = await fetch('http://localhost:3000/api/auth/register', {
+            const res = await fetch('https://a118d7ee0dab.ngrok-free.app/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
@@ -145,20 +145,20 @@ const Signup = () => {
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
                                 <input
-                                    type="text" name="firstName" value={formData.firstName} onChange={handleChange}
+                                    type="text" name="firstname" value={formData.firstname} onChange={handleChange}
                                     placeholder="John" required
-                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 ${formErrors.firstName ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-indigo-400'}`}
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 ${formErrors.firstname ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-indigo-400'}`}
                                 />
-                                {formErrors.firstName && <p className="text-red-600 text-xs mt-1">{formErrors.firstName}</p>}
+                                {formErrors.firstname && <p className="text-red-600 text-xs mt-1">{formErrors.firstname}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
                                 <input
-                                    type="text" name="lastName" value={formData.lastName} onChange={handleChange}
+                                    type="text" name="lastname" value={formData.lastname} onChange={handleChange}
                                     placeholder="Doe" required
-                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 ${formErrors.lastName ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-indigo-400'}`}
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 ${formErrors.lastname ? 'border-red-500 focus:ring-red-300' : 'border-gray-300 focus:ring-indigo-400'}`}
                                 />
-                                {formErrors.lastName && <p className="text-red-600 text-xs mt-1">{formErrors.lastName}</p>}
+                                {formErrors.lastname && <p className="text-red-600 text-xs mt-1">{formErrors.lastname}</p>}
                             </div>
                         </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Calendar, CheckCircle, AlertCircle, Loader2, Receipt } from 'lucide-react';
-
+import api from '@/utils/interceptor.jsx';
 const PaymentHistory = () => {
   const [payments, setPayments] = useState([]);
   const [stats, setStats] = useState({ totalAmount: 0, totalPayments: 0 });
@@ -14,19 +14,12 @@ const PaymentHistory = () => {
 
   const fetchPaymentHistory = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch('/api/elections/payments/history', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-
-      const data = await response.json();
+      const response = await api.get('/elections/payments/history'); // ← Changed
       
-      if (data.success) {
-        setPayments(data.payments);
+      if (response.data.success) {
+        setPayments(response.data.payments);
       } else {
-        setError(data.message);
+        setError(response.data.message);
       }
     } catch (err) {
       setError('Failed to load payment history');
@@ -38,17 +31,10 @@ const PaymentHistory = () => {
 
   const fetchPaymentStats = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch('/api/elections/payments/stats', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-
-      const data = await response.json();
+      const response = await api.get('/elections/payments/stats'); // ← Changed
       
-      if (data.success) {
-        setStats(data.stats);
+      if (response.data.success) {
+        setStats(response.data.stats);
       }
     } catch (err) {
       console.error('Fetch payment stats error:', err);

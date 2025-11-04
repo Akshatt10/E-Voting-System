@@ -19,6 +19,7 @@ import VoteResultPage from './pages/VoteResultPage';
 import PaymentHistory from './pages/PaymentHistory';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   return (
@@ -50,6 +51,9 @@ function App() {
           <Route path="/election/:electionId/results" element={<VoteResultPage />} />
           <Route path="/payment-history" element={<PaymentHistory />} />
         </Route>
+
+        {/* Admin Dashboard Route */}
+        <Route path="/admin" element={<AdminDashboard />} />
 
         <Route path="*" element={<Home />} />
       </Routes>

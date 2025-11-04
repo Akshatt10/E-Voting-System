@@ -17,12 +17,29 @@ model User {
   passwordHash String
   role         Role     @default(VOTER)
   verified     Boolean  @default(true)
+  accountStatus AccountStatus @default(PENDING) // NEW FIELD
+  approvedBy   String?  // NEW FIELD - admin who approved
+  approvedAt   DateTime? // NEW FIELD
+  rejectedAt   DateTime? // NEW FIELD
+  rejectionReason String? // NEW FIELD
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   elections     Election[]
   auditLogs     AuditLog[]
   refreshTokens RefreshToken[]
   payments      Payment[]
+}
+
+enum Role {
+  ADMIN
+  VOTER
+}
+
+enum AccountStatus {
+  PENDING    // Waiting for admin approval
+  APPROVED   // Admin approved
+  REJECTED   // Admin rejected
+  SUSPENDED  // Admin suspended the account
 }
 
 model RefreshToken {
@@ -146,11 +163,6 @@ model OTP {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-}
-
-enum Role {
-  ADMIN
-  VOTER
 }
 
 enum VoteStatus {
